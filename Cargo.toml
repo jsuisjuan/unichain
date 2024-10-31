@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4"
+idgenerator = "2.0.0"
