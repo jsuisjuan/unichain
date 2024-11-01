@@ -1,44 +1,5 @@
 use chrono::NaiveDate;
-use idgenerator::*;
-use std::process;
-
-#[derive(Debug)]
-enum FileType {
-    Pdf,
-    Docx,
-    Xls,
-    Txt,
-    Csv,
-    Pptx,
-    Jpg,
-    Png,
-}
-
-#[derive(Debug)]
-struct File {
-    id: i64,
-    name: String,
-    file_type: FileType,
-    size: u64,
-    created: NaiveDate,
-    modified: NaiveDate,
-    accessed: Option<NaiveDate>,
-    owner: (i64, String, String),
-    people_with_access: Vec<(i64, String, String)>,
-    ipfs_hash: String,
-    onchain_txn_id: String,
-    download_permission: bool,
-    description: Option<String>
-}
-
-fn generate_id() -> i64 {
-    let options = IdGeneratorOptions::new().worker_id(1).worker_id_bit_len(6);
-    let _ = IdInstance::init(options).unwrap_or_else(|err| {
-        eprintln!("Problem on instancing id generator options: {err}");
-        process::exit(1);
-    });
-    IdInstance::next_id()
-}
+use unichain::*;
 
 fn main() {
     println!("Welcome to your UniChain!");
