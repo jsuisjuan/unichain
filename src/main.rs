@@ -1,6 +1,4 @@
-mod utils;
-use utils::generate_id;
-mod model;
+use unichain::utils::generate_id;
 
 fn main() {
     println!("Welcome to your UniChain!");

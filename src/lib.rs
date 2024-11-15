@@ -1,18 +1,18 @@
 use std::fs::File as StdFile;
 use std::io::{Read, Write};
+
 use bincode;
 
-mod model;
+pub mod model;
 use model::File;
 
-mod utils;
+pub mod utils;
 use utils::{get_default_file, FileData};
-
 
 fn load_files_from_file(path: &str) -> std::io::Result<Vec<File>> {
     let mut file: StdFile = match StdFile::open(path) {
         Ok(f) => f,
-        Err(_) => return Ok(Vec::new()),
+        Err(_) => return Ok(Vec::new())
     };
     let mut buffer: Vec<u8> = Vec::new();
     file.read_to_end(&mut buffer)?;

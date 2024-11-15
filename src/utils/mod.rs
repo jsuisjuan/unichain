@@ -1,11 +1,12 @@
-
-use crate::model::{File, FileType};
-use chrono::Utc;
-use rand::{distributions::Alphanumeric, Rng};
 use std::fs::{metadata, Metadata};
 use std::path::Path;
-use idgenerator::*;
 use std::process;
+
+use chrono::Utc;
+use idgenerator::*;
+use rand::{distributions::Alphanumeric, Rng};
+
+use crate::model::{File, FileType};
 
 pub struct FileData {
     pub owner: (i64, String, String),
