@@ -65,3 +65,7 @@ pub fn get_default_file(file_data: &FileData, path: &str) -> Result<File, String
         description: None,
     })
 }
+
+pub fn process_new_file() {
+    
+}

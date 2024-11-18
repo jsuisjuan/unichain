@@ -50,6 +50,7 @@ pub fn get_file(path: &str, file_id: i64) -> Result<File, String> {
     files.into_iter().find(|file| file.id == file_id).ok_or_else(|| "File not found".to_string())
 }
 
+// I need to treat the updated file
 pub fn modify_file(path: &str, file_id: i64, updated_file: File) -> Result<(), String> {
     let mut files: Vec<File> = get_all_files(path)?;
     let file_index: usize = files.iter().position(|file| file.id == file_id).ok_or_else(|| "File not found".to_string())?;
