@@ -4,10 +4,10 @@ use std::io::{Read, Write};
 use bincode;
 
 pub mod model;
-use model::File;
+use model::{File, FileData};
 
 pub mod utils;
-use utils::{get_default_file, FileData};
+use utils::get_default_file;
 
 fn load_files_from_file(path: &str) -> std::io::Result<Vec<File>> {
     let mut file: StdFile = match StdFile::open(path) {
@@ -16,7 +16,10 @@ fn load_files_from_file(path: &str) -> std::io::Result<Vec<File>> {
     };
     let mut buffer: Vec<u8> = Vec::new();
     file.read_to_end(&mut buffer)?;
-    let decoded: Vec<File> = bincode::deserialize(&buffer).expect("Failed to deserialize Vec<File>");
+    let decoded: Vec<File> = match bincode::deserialize(&buffer) {
+        Ok(files) => files,
+        Err(_) => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to deserialize Vec<File>"))
+    };
     Ok(decoded)
 }
 
@@ -33,8 +36,8 @@ fn add_files_to_file(file: File, path: &str) -> std::io::Result<()> {
     save_files_to_file(&files, path)
 }
 
-pub fn create_new_file(file_data: FileData, path: &str) -> Result<(), String> {
-    let mut file: File = get_default_file(&file_data, path).map_err(|e| format!("Erro ao criar arquivo: {}", e))?;
+pub fn create_new_file(file_data: FileData, file_path: &str, path: &str) -> Result<(), String> {
+    let mut file: File = get_default_file(&file_data, file_path).map_err(|e| format!("Erro ao criar arquivo: {}", e))?;
     file.name = file_data.name;
     add_files_to_file(file, path).map_err(|e| format!("Error saving file: {}", e))?;
     println!("File created and saved successfully");
@@ -50,7 +53,6 @@ pub fn get_file(path: &str, file_id: i64) -> Result<File, String> {
     files.into_iter().find(|file| file.id == file_id).ok_or_else(|| "File not found".to_string())
 }
 
-// I need to treat the updated file
 pub fn modify_file(path: &str, file_id: i64, updated_file: File) -> Result<(), String> {
     let mut files: Vec<File> = get_all_files(path)?;
     let file_index: usize = files.iter().position(|file| file.id == file_id).ok_or_else(|| "File not found".to_string())?;

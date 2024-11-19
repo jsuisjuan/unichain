@@ -30,3 +30,9 @@ pub struct File {
     pub download_permission: bool,
     pub description: Option<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FileData {
+    pub owner: (i64, String, String),
+    pub name: String,
+}

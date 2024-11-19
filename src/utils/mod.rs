@@ -6,12 +6,7 @@ use chrono::Utc;
 use idgenerator::*;
 use rand::{distributions::Alphanumeric, Rng};
 
-use crate::model::{File, FileType};
-
-pub struct FileData {
-    pub owner: (i64, String, String),
-    pub name: String,
-}
+use crate::model::{File, FileType, FileData};
 
 pub fn generate_id() -> i64 {
     let options: IdGeneratorOptions = IdGeneratorOptions::new().worker_id(1).worker_id_bit_len(6);
@@ -26,7 +21,7 @@ fn generate_fake_hash(length: usize) -> String {
     rand::thread_rng().sample_iter(&Alphanumeric).take(length).map(char::from).collect()
 }
 
-fn get_file_type(file_path: &str) -> FileType {
+pub fn get_file_type(file_path: &str) -> FileType {
     let path: &Path = Path::new(file_path);
     match path.extension().and_then(|ext| ext.to_str()) {
         Some("pdf") => FileType::Pdf,
@@ -41,7 +36,7 @@ fn get_file_type(file_path: &str) -> FileType {
     }
 }
 
-fn get_file_size(file_path: &str) -> std::io::Result<u64> {
+pub fn get_file_size(file_path: &str) -> std::io::Result<u64> {
     let metadata: Metadata = metadata(file_path)?;
     Ok(metadata.len())
 }
