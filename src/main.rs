@@ -1,6 +1,6 @@
 use std::{io::{self, Write}, path::Path};
 
-use unichain::{create_new_file, delete_file, get_all_files, get_file, modify_file, model::{File, FileData}};
+use unichain::{create_new_file, delete_file, get_all_files, get_file, modify_file, model::{File, FileData}, utils::generate_id};
 
 const PATH: &str = "../assets/";
 
@@ -32,6 +32,7 @@ fn get_files() -> Result<(), String> {
 }
 
 fn get_specific_file() -> Result<(), String> {
+    // preciso alterar a data de pub accessed: Option<NaiveDateTime>,
     print!("Insert file ID: ");
     io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
     let mut file_id_input: String = String::new();
@@ -45,11 +46,11 @@ fn get_specific_file() -> Result<(), String> {
 fn store_new_file(owner: (i64, String, String)) -> Result<(), String> {
     print!("Insert file path you want to store: ");
     io::stdout().flush().map_err(|e| e.to_string())?;
-    let mut file_path = String::new();
+    let mut file_path: String = String::new();
     io::stdin().read_line(&mut file_path).map_err(|e| e.to_string())?;
-    let file_path = file_path.trim();
-    let path = Path::new(file_path);
-    let filename = match path.file_name() {
+    let file_path: &str = file_path.trim();
+    let path: &Path = Path::new(file_path);
+    let filename: String = match path.file_name() {
         Some(name) => name.to_string_lossy().into_owned(),
         None => {
             eprintln!("Invalid file path");
@@ -58,13 +59,13 @@ fn store_new_file(owner: (i64, String, String)) -> Result<(), String> {
     };
     print!("Your current file name is: {}. Do you want to change it? (Y/N): ", filename);
     io::stdout().flush().map_err(|e| e.to_string())?;
-    let mut change_name_response = String::new();
+    let mut change_name_response: String = String::new();
     io::stdin().read_line(&mut change_name_response).map_err(|e| e.to_string())?;
-    let change_name_response = change_name_response.trim().to_lowercase();
-    let final_name = if change_name_response == "y" {
+    let change_name_response: String = change_name_response.trim().to_lowercase();
+    let final_name: String = if change_name_response == "y" {
         print!("Enter the new file name: ");
         io::stdout().flush().map_err(|e| e.to_string())?;
-        let mut new_name = String::new();
+        let mut new_name: String = String::new();
         io::stdin().read_line(&mut new_name).map_err(|e| e.to_string())?;
         new_name.trim().to_string()
     } else {
@@ -84,9 +85,76 @@ fn update_existing_file() -> Result<(), String> {
     let mut file_id_input: String = String::new();
     io::stdin().read_line(&mut file_id_input).map_err(|_| "Failed to read from stdin")?;
     let file_id: i64 = file_id_input.trim().parse::<i64>().map_err(|_| "Please enter a valid ID number.")?;
-    let _file: File = get_file(PATH, file_id)?;
-    // this function will be very complex
-    // modify_file(PATH, file_id, updated_file);
+    let mut file: File = get_file(PATH, file_id)?;
+    
+    println!("\tModifying file");
+
+    // pub name: String,
+    print!("Add new file name: ");
+    io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
+    let mut new_name: String = String::new();
+    io::stdin().read_line(&mut new_name).map_err(|_| "Failed to read from stdin")?;
+
+    // pub description: Option<String>,
+    print!("Add new file description: ");
+    io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
+    let mut new_description: String = String::new();
+    io::stdin().read_line(&mut new_description).map_err(|_| "Failed to read from stdin")?;
+
+    // pub people_with_access: Vec<(i64, String, String)>,
+    print!("Do you want to change people with access list?(Y/N): ");
+    io::stdout().flush().map_err(|e| e.to_string())?;
+    let mut response: String = String::new();
+    io::stdin().read_line(&mut response).map_err(|e| e.to_string())?;
+    let response: String = response.trim().to_lowercase();
+    
+    if response == "y" {
+        loop {
+            println!("\tEnter the new person information:");
+            
+            print!("Name: ");
+            io::stdout().flush().map_err(|e| e.to_string())?;
+            let mut person_name = String::new();
+            io::stdin().read_line(&mut person_name).map_err(|e| e.to_string())?;
+            let person_name = person_name.trim().to_string();
+            
+            print!("E-mail: ");
+            io::stdout().flush().map_err(|e| e.to_string())?;
+            let mut person_email = String::new();
+            io::stdin().read_line(&mut person_email).map_err(|e| e.to_string())?;
+            let person_email = person_email.trim().to_string();
+    
+            file.people_with_access.push((generate_id(), person_name, person_email));
+            
+            print!("Do you want to add another person? (Y/N): ");
+            io::stdout().flush().map_err(|e| e.to_string())?;
+            let mut add_another_person_response = String::new();
+            io::stdin().read_line(&mut add_another_person_response).map_err(|e| e.to_string())?;
+            let add_another_person_response = add_another_person_response.trim().to_lowercase();
+    
+            match add_another_person_response.as_str() {
+                "y" => continue,
+                "n" => break,
+                _ => println!("Invalid input. Please enter 'Y' or 'N'.")
+            }
+        }
+    }
+    
+    // pub download_permission: bool,
+    file.download_permission = loop {
+        print!("Do you want to allow download permission for this file?(Y/N): ");
+        io::stdout().flush().map_err(|e| e.to_string())?;
+        let mut download_permission_response = String::new();
+        io::stdin().read_line(&mut download_permission_response).map_err(|e| e.to_string())?;
+        download_permission_response = download_permission_response.trim().to_lowercase();
+        match download_permission_response.as_str() {
+            "y" => break true,
+            "n" => break false,
+            _ => println!("Invalid input. Please enter 'Y' or 'N'.")
+        }
+    };
+    
+    modify_file(PATH, file_id, file).map_err(|e| format!("Failed to modify file: {}", e))?;
     Ok(())
 }
 

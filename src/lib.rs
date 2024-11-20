@@ -7,7 +7,7 @@ pub mod model;
 use model::{File, FileData};
 
 pub mod utils;
-use utils::get_default_file;
+use utils::{get_default_file, process_modified_file};
 
 fn load_files_from_file(path: &str) -> std::io::Result<Vec<File>> {
     let mut file: StdFile = match StdFile::open(path) {
@@ -56,7 +56,7 @@ pub fn get_file(path: &str, file_id: i64) -> Result<File, String> {
 pub fn modify_file(path: &str, file_id: i64, updated_file: File) -> Result<(), String> {
     let mut files: Vec<File> = get_all_files(path)?;
     let file_index: usize = files.iter().position(|file| file.id == file_id).ok_or_else(|| "File not found".to_string())?;
-    files[file_index] = updated_file;
+    files[file_index] = process_modified_file(updated_file)?;
     save_files_to_file(&files, path).map_err(|e| format!("Error updating file: {}", e))
 }
 

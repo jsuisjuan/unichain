@@ -61,6 +61,8 @@ pub fn get_default_file(file_data: &FileData, path: &str) -> Result<File, String
     })
 }
 
-pub fn process_new_file() {
-    
+pub fn process_modified_file(mut file: File) -> Result<File, String> {
+    file.modified = Some(Utc::now().naive_utc());
+    file.accessed = Some(Utc::now().naive_utc());
+    Ok(file)
 }
