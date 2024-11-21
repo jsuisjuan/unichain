@@ -1,8 +1,16 @@
 use std::{io::{self, Write}, path::Path};
+use log::{info, error};
+use anyhow::{Result, Error};
 
 use unichain::{create_new_file, delete_file, get_all_files, get_file, modify_file, model::{File, FileData}, utils::generate_id};
 
 const PATH: &str = "../assets/";
+
+// things to do:
+// - refact everything and move these functions to another file
+// - docment every function
+// - build unit test
+// - test
 
 fn get_system_owner() -> (i64, String, String) {
     (2454826096558341, String::from("Juan Carvalho Silva de Lima"), String::from("juanc.s.delima@gmail.com"))
@@ -16,7 +24,7 @@ fn print_menu_options() {
 fn get_choosed_option() -> Result<u8, String> {
     print!("Choose an option: ");
     io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
-    let mut choosed_option: String = String::new();
+    let mut choosed_option = String::new();
     io::stdin().read_line(&mut choosed_option).map_err(|_| "Failed to read from stdin")?;
     match choosed_option.trim().parse::<u8>() {
         Ok(num) => Ok(num),
@@ -24,15 +32,21 @@ fn get_choosed_option() -> Result<u8, String> {
     }
 }
 
-fn get_files() -> Result<(), String> {
-    println!("All the files:");
-    let files: Vec<File> = get_all_files(PATH)?;
+fn get_files() -> Result<()> {
+    info!("Fetching all the files.");
+    let files: Vec<File> = match get_all_files(PATH) {
+        Ok(files) => files,
+        Err(e) => {
+            error!("Failed to fetch files: {}", e);
+            return Err(Error::msg(e));
+        }
+    };
+    info!("Successfully fetched {} files.", files.len());
     println!("{:?}", files);
     Ok(())
 }
 
 fn get_specific_file() -> Result<(), String> {
-    // preciso alterar a data de pub accessed: Option<NaiveDateTime>,
     print!("Insert file ID: ");
     io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
     let mut file_id_input: String = String::new();
@@ -89,19 +103,16 @@ fn update_existing_file() -> Result<(), String> {
     
     println!("\tModifying file");
 
-    // pub name: String,
     print!("Add new file name: ");
     io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
     let mut new_name: String = String::new();
     io::stdin().read_line(&mut new_name).map_err(|_| "Failed to read from stdin")?;
 
-    // pub description: Option<String>,
     print!("Add new file description: ");
     io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
     let mut new_description: String = String::new();
     io::stdin().read_line(&mut new_description).map_err(|_| "Failed to read from stdin")?;
 
-    // pub people_with_access: Vec<(i64, String, String)>,
     print!("Do you want to change people with access list?(Y/N): ");
     io::stdout().flush().map_err(|e| e.to_string())?;
     let mut response: String = String::new();
@@ -140,7 +151,6 @@ fn update_existing_file() -> Result<(), String> {
         }
     }
     
-    // pub download_permission: bool,
     file.download_permission = loop {
         print!("Do you want to allow download permission for this file?(Y/N): ");
         io::stdout().flush().map_err(|e| e.to_string())?;
@@ -176,7 +186,7 @@ fn system_menu(owner: (i64, String, String)) -> Result<(), String> {
             Ok(option) if (0..=5).contains(&option) => {
                 match option {
                     0 => {println!("Exiting..."); break Ok(());},
-                    1 => {get_files()?; break Ok(());},
+                    1 => {let _ = get_files(); break Ok(());},
                     2 => {get_specific_file()?; break Ok(());},
                     3 => {store_new_file(owner)?; break Ok(());},
                     4 => {update_existing_file()?; break Ok(());},

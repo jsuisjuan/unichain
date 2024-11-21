@@ -7,7 +7,7 @@ pub mod model;
 use model::{File, FileData};
 
 pub mod utils;
-use utils::{get_default_file, process_modified_file};
+use utils::{get_default_file, process_modified_file, update_accessed_file_date};
 
 fn load_files_from_file(path: &str) -> std::io::Result<Vec<File>> {
     let mut file: StdFile = match StdFile::open(path) {
@@ -49,8 +49,14 @@ pub fn get_all_files(path: &str) -> Result<Vec<File>, String> {
 }
 
 pub fn get_file(path: &str, file_id: i64) -> Result<File, String> {
-    let files: Vec<File> = get_all_files(path)?;
-    files.into_iter().find(|file| file.id == file_id).ok_or_else(|| "File not found".to_string())
+    let mut files: Vec<File> = get_all_files(path)?;
+    let file_index: usize = files.iter().position(|file| file.id == file_id).ok_or_else(|| "File not found".to_string())?;
+    {
+        let file = &mut files[file_index];
+        *file = update_accessed_file_date(file.clone())?;
+    }
+    save_files_to_file(&files, path).map_err(|e| format!("Error updating file: {}", e))?;
+    Ok(files[file_index].clone())
 }
 
 pub fn modify_file(path: &str, file_id: i64, updated_file: File) -> Result<(), String> {

@@ -9,3 +9,5 @@ idgenerator = "2.0.0"
 serde = { version = "1.0.214", features = ["derive"] }
 bincode = "1.3.3"
 rand = "0.8"
+anyhow = "1.0.93"
+log = "0.4.22"

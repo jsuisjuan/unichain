@@ -66,3 +66,8 @@ pub fn process_modified_file(mut file: File) -> Result<File, String> {
     file.accessed = Some(Utc::now().naive_utc());
     Ok(file)
 }
+
+pub fn update_accessed_file_date(mut file: File) -> Result<File, String> {
+    file.accessed = Some(Utc::now().naive_utc());
+    Ok(file)
+}

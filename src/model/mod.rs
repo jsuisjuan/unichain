@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum FileType {
     Pdf,
     Docx,
@@ -14,7 +14,7 @@ pub enum FileType {
     Unknown
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct File {
     pub id: i64,
     pub name: String,
