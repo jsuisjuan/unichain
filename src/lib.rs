@@ -1,5 +1,6 @@
 use std::fs::File as StdFile;
 use std::io::{Read, Write};
+use std::path::PathBuf;
 
 use bincode;
 
@@ -36,7 +37,7 @@ fn add_files_to_file(file: File, path: &str) -> std::io::Result<()> {
     save_files_to_file(&files, path)
 }
 
-pub fn create_new_file(file_data: FileData, file_path: &str, path: &str) -> Result<(), String> {
+pub fn create_new_file(file_data: FileData, file_path: &PathBuf, path: &str) -> Result<(), String> {
     let mut file: File = get_default_file(&file_data, file_path).map_err(|e| format!("Erro ao criar arquivo: {}", e))?;
     file.name = file_data.name;
     add_files_to_file(file, path).map_err(|e| format!("Error saving file: {}", e))?;
@@ -73,5 +74,6 @@ pub fn delete_file(path: &str, file_id: i64) -> Result<(), String> {
     if files.len() == initial_length {
         return Err("File not found".to_string());
     }
-    save_files_to_file(&files, path).map_err(|e| format!("Error updating file: {}", e))
+    save_files_to_file(&files, path).map_err(|e| format!("Error updating file: {}", e))?;
+    Ok(())
 }

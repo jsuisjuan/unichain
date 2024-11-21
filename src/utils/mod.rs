@@ -1,5 +1,5 @@
 use std::fs::{metadata, Metadata};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use chrono::Utc;
@@ -21,7 +21,7 @@ fn generate_fake_hash(length: usize) -> String {
     rand::thread_rng().sample_iter(&Alphanumeric).take(length).map(char::from).collect()
 }
 
-pub fn get_file_type(file_path: &str) -> FileType {
+pub fn get_file_type(file_path: &PathBuf) -> FileType {
     let path: &Path = Path::new(file_path);
     match path.extension().and_then(|ext| ext.to_str()) {
         Some("pdf") => FileType::Pdf,
@@ -36,12 +36,12 @@ pub fn get_file_type(file_path: &str) -> FileType {
     }
 }
 
-pub fn get_file_size(file_path: &str) -> std::io::Result<u64> {
+pub fn get_file_size(file_path: &PathBuf) -> std::io::Result<u64> {
     let metadata: Metadata = metadata(file_path)?;
     Ok(metadata.len())
 }
 
-pub fn get_default_file(file_data: &FileData, path: &str) -> Result<File, String> {
+pub fn get_default_file(file_data: &FileData, path: &PathBuf) -> Result<File, String> {
     let owner_access: (i64, String, String) = file_data.owner.clone();
     let file_size: u64 = get_file_size(path).map_err(|e| e.to_string())?; 
     Ok(File {

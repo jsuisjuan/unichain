@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use std::{io::{self, Write}, path::Path, fmt};
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -35,4 +36,23 @@ pub struct File {
 pub struct FileData {
     pub owner: (i64, String, String),
     pub name: String,
+}
+
+#[derive(Debug)]
+pub enum FileError {
+    InputError(String),
+    ParseError,
+    FileNotFound,
+    IOError(io::Error)
+}
+
+impl fmt::Display for FileError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FileError::InputError(msg) => write!(f, "Input error: {}", msg),
+            FileError::ParseError => write!(f, "Invalid file ID input, please enter a valid number."),
+            FileError::FileNotFound => write!(f, "File not found."),
+            FileError::IOError(err) => write!(f, "I/O error: {}", err)
+        }
+    }
 }

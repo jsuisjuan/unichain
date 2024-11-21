@@ -1,16 +1,10 @@
-use std::{io::{self, Write}, path::Path};
+use std::{io::{self, Write}, path::PathBuf};
 use log::{info, error};
-use anyhow::{Result, Error};
+use anyhow::Result;
 
-use unichain::{create_new_file, delete_file, get_all_files, get_file, modify_file, model::{File, FileData}, utils::generate_id};
+use unichain::{create_new_file, delete_file, get_all_files, get_file, modify_file, model::{File, FileData, FileError}, utils::generate_id};
 
 const PATH: &str = "../assets/";
-
-// things to do:
-// - refact everything and move these functions to another file
-// - docment every function
-// - build unit test
-// - test
 
 fn get_system_owner() -> (i64, String, String) {
     (2454826096558341, String::from("Juan Carvalho Silva de Lima"), String::from("juanc.s.delima@gmail.com"))
@@ -21,24 +15,25 @@ fn print_menu_options() {
     println!("1. View list of stored files\n2. View a specific file\n3. Store a new file\n4. Update an existing file\n5. Move a file to trash\n0. Exit");
 }
 
-fn get_choosed_option() -> Result<u8, String> {
-    print!("Choose an option: ");
-    io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
+fn get_choosed_option() -> Result<u8, FileError> {
+    print!("Choose an option (0-5): ");
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
     let mut choosed_option = String::new();
-    io::stdin().read_line(&mut choosed_option).map_err(|_| "Failed to read from stdin")?;
+    io::stdin().read_line(&mut choosed_option).map_err(|e| FileError::IOError(e))?;
     match choosed_option.trim().parse::<u8>() {
-        Ok(num) => Ok(num),
-        Err(_) => Err("Please enter a valid number between 0 and 5.".to_string())
+        Ok(num) if (0..=5).contains(&num) => Ok(num),
+        Ok(_) => Err(FileError::InputError("The number must be between 0 and 5.".to_string())),
+        Err(e) => Err(FileError::InputError(format!("Invalid input, please enter a number: {}", e)))
     }
 }
 
-fn get_files() -> Result<()> {
+fn get_files() -> Result<(), FileError> {
     info!("Fetching all the files.");
     let files: Vec<File> = match get_all_files(PATH) {
         Ok(files) => files,
         Err(e) => {
             error!("Failed to fetch files: {}", e);
-            return Err(Error::msg(e));
+            return Err(FileError::FileNotFound);
         }
     };
     info!("Successfully fetched {} files.", files.len());
@@ -46,158 +41,199 @@ fn get_files() -> Result<()> {
     Ok(())
 }
 
-fn get_specific_file() -> Result<(), String> {
+fn get_specific_file() -> Result<(), FileError> {
     print!("Insert file ID: ");
-    io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
-    let mut file_id_input: String = String::new();
-    io::stdin().read_line(&mut file_id_input).map_err(|_| "Failed to read from stdin")?;
-    let file_id: i64 = file_id_input.trim().parse::<i64>().map_err(|_| "Please enter a valid ID number.")?;
-    let file: File = get_file(PATH, file_id)?;
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut file_id_input = String::new();
+    io::stdin().read_line(&mut file_id_input).map_err(|e| FileError::IOError(e))?;
+    let file_id = file_id_input.trim().parse::<i64>().map_err(|_| FileError::ParseError)?;
+    let file = get_file(PATH, file_id).map_err(|_| FileError::FileNotFound)?;
     println!("File found\n{:?}", file);
     Ok(())
 }
 
-fn store_new_file(owner: (i64, String, String)) -> Result<(), String> {
+fn prompt_for_file_path() -> Result<PathBuf, FileError> {
     print!("Insert file path you want to store: ");
-    io::stdout().flush().map_err(|e| e.to_string())?;
-    let mut file_path: String = String::new();
-    io::stdin().read_line(&mut file_path).map_err(|e| e.to_string())?;
-    let file_path: &str = file_path.trim();
-    let path: &Path = Path::new(file_path);
-    let filename: String = match path.file_name() {
-        Some(name) => name.to_string_lossy().into_owned(),
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut file_path = String::new();
+    io::stdin().read_line(&mut file_path).map_err(|e| FileError::IOError(e))?;
+    let trimmed_path = file_path.trim();
+    if trimmed_path.is_empty() {
+        error!("File path input is empty.");
+        return Err(FileError::InputError("File path cannot be empty.".to_string()));
+    }
+    Ok(PathBuf::from(trimmed_path))
+}
+
+fn extract_filename(path: &PathBuf) -> Result<PathBuf, FileError> {
+    match path.file_name() {
+        Some(name) => Ok(name.to_string_lossy().into_owned().into()),
         None => {
-            eprintln!("Invalid file path");
-            return Err("Invalid file path".to_string());
+            error!("Invalid file path: {}", path.display());
+            Err(FileError::InputError("Invalid file path".to_string()))
         }
-    };
-    print!("Your current file name is: {}. Do you want to change it? (Y/N): ", filename);
-    io::stdout().flush().map_err(|e| e.to_string())?;
-    let mut change_name_response: String = String::new();
-    io::stdin().read_line(&mut change_name_response).map_err(|e| e.to_string())?;
-    let change_name_response: String = change_name_response.trim().to_lowercase();
-    let final_name: String = if change_name_response == "y" {
-        print!("Enter the new file name: ");
-        io::stdout().flush().map_err(|e| e.to_string())?;
-        let mut new_name: String = String::new();
-        io::stdin().read_line(&mut new_name).map_err(|e| e.to_string())?;
-        new_name.trim().to_string()
+    }
+}
+
+fn ask_for_filename_change(current_name: &PathBuf) -> Result<String, FileError> {
+    print!("Your current file name is: {}. Do you want to change it? (Y/N): ", current_name.display());
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut response = String::new();
+    io::stdin().read_line(&mut response).map_err(|e| FileError::IOError(e))?;
+    let trimmed_response = response.trim().to_lowercase();
+    if trimmed_response == "y" {
+        prompt_for_new_file_name()
     } else {
-        filename
-    };
+        Ok(current_name.to_string_lossy().into_owned())
+    }
+}
+
+fn prompt_for_new_file_name() -> Result<String, FileError> {
+    print!("Enter the new file name: ");
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut new_name = String::new();
+    io::stdin().read_line(&mut new_name).map_err(|e| FileError::IOError(e))?;
+    let trimmed_name = new_name.trim();
+    if trimmed_name.is_empty() {
+        error!("New file name input is empty.");
+        FileError::InputError("New file name cannot be empty.".to_string());
+    }
+    Ok(trimmed_name.to_string())
+}
+
+fn prompt_for_new_description() -> Result<Option<String>, FileError> {
+    print!("Add new file description:" );
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut new_description = String::new();
+    io::stdin().read_line(&mut new_description).map_err(|e| FileError::IOError(e))?;
+    let trimmed_description = new_description.trim();
+    Ok(if trimmed_description.is_empty() { None } else { Some(trimmed_description.to_string())})
+}
+
+fn store_new_file(owner: (i64, String, String)) -> Result<(), FileError> {
+    let file_path= prompt_for_file_path()?;
+    let filename = extract_filename(&file_path)?;
+    let final_name = ask_for_filename_change(&filename)?;
     let file_data = FileData {
         owner,
         name: final_name,
     };
-    create_new_file(file_data, file_path, "PATH")?;
+    let _ = create_new_file(file_data, &file_path, "PATH");
     Ok(())
 }
 
-fn update_existing_file() -> Result<(), String> {
-    print!("Insert file ID: ");
-    io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
-    let mut file_id_input: String = String::new();
-    io::stdin().read_line(&mut file_id_input).map_err(|_| "Failed to read from stdin")?;
-    let file_id: i64 = file_id_input.trim().parse::<i64>().map_err(|_| "Please enter a valid ID number.")?;
-    let mut file: File = get_file(PATH, file_id)?;
-    
-    println!("\tModifying file");
-
-    print!("Add new file name: ");
-    io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
-    let mut new_name: String = String::new();
-    io::stdin().read_line(&mut new_name).map_err(|_| "Failed to read from stdin")?;
-
-    print!("Add new file description: ");
-    io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
-    let mut new_description: String = String::new();
-    io::stdin().read_line(&mut new_description).map_err(|_| "Failed to read from stdin")?;
-
-    print!("Do you want to change people with access list?(Y/N): ");
-    io::stdout().flush().map_err(|e| e.to_string())?;
-    let mut response: String = String::new();
-    io::stdin().read_line(&mut response).map_err(|e| e.to_string())?;
-    let response: String = response.trim().to_lowercase();
-    
-    if response == "y" {
-        loop {
-            println!("\tEnter the new person information:");
-            
-            print!("Name: ");
-            io::stdout().flush().map_err(|e| e.to_string())?;
-            let mut person_name = String::new();
-            io::stdin().read_line(&mut person_name).map_err(|e| e.to_string())?;
-            let person_name = person_name.trim().to_string();
-            
-            print!("E-mail: ");
-            io::stdout().flush().map_err(|e| e.to_string())?;
-            let mut person_email = String::new();
-            io::stdin().read_line(&mut person_email).map_err(|e| e.to_string())?;
-            let person_email = person_email.trim().to_string();
-    
-            file.people_with_access.push((generate_id(), person_name, person_email));
-            
-            print!("Do you want to add another person? (Y/N): ");
-            io::stdout().flush().map_err(|e| e.to_string())?;
-            let mut add_another_person_response = String::new();
-            io::stdin().read_line(&mut add_another_person_response).map_err(|e| e.to_string())?;
-            let add_another_person_response = add_another_person_response.trim().to_lowercase();
-    
-            match add_another_person_response.as_str() {
-                "y" => continue,
-                "n" => break,
-                _ => println!("Invalid input. Please enter 'Y' or 'N'.")
-            }
-        }
-    }
-    
-    file.download_permission = loop {
-        print!("Do you want to allow download permission for this file?(Y/N): ");
-        io::stdout().flush().map_err(|e| e.to_string())?;
-        let mut download_permission_response = String::new();
-        io::stdin().read_line(&mut download_permission_response).map_err(|e| e.to_string())?;
-        download_permission_response = download_permission_response.trim().to_lowercase();
-        match download_permission_response.as_str() {
-            "y" => break true,
-            "n" => break false,
+fn ask_yes_no(prompt: &str) -> Result<bool, FileError> {
+    loop {
+        print!("{}", prompt);
+        io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+        let mut response = String::new();
+        io::stdin().read_line(&mut response).map_err(|e| FileError::IOError(e))?;
+        match response.trim().to_lowercase().as_str() {
+            "y" => return Ok(true),
+            "n" => return Ok(false),
             _ => println!("Invalid input. Please enter 'Y' or 'N'.")
         }
-    };
-    
-    modify_file(PATH, file_id, file).map_err(|e| format!("Failed to modify file: {}", e))?;
+    }
+}
+
+fn prompt_for_input(prompt: &str) -> Result<String, FileError> {
+    print!("{}", prompt);
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).map_err(|e| FileError::IOError(e))?;
+    let trimmed_input = input.trim();
+    if trimmed_input.is_empty() {
+        error!("Input cannot be empty for prompt '{}'.", prompt);
+        FileError::InputError("Input cannot be empty.".to_string());
+    }
+    Ok(trimmed_input.to_string())
+}
+
+fn update_people_with_access(file: &mut File) -> Result<(), FileError> {
+    loop {
+        println!("\tEnter the new person information:");
+        let person_name = prompt_for_input("Name: ")?;
+        let person_email = prompt_for_input("E-mail: ")?;
+        file.people_with_access.push((generate_id(), person_name, person_email));
+        if !ask_yes_no("Do you want to add another person? (Y/N): ")? {
+            break;
+        }
+    }
     Ok(())
 }
 
-fn move_file_to_trash() -> Result<(), String> {
+fn update_existing_file() -> Result<(), FileError> {
+    let file_id = prompt_for_file_id()?;
+    let mut file = get_file(PATH, file_id).map_err(|e| FileError::InputError(e))?;
+    info!("Modifying file with ID: {}", file_id);
+    file.name = prompt_for_new_file_name()?;
+    file.description = prompt_for_new_description()?;
+    if ask_yes_no("Do you want to change the people with access list? (Y/N): ")? {
+        update_people_with_access(&mut file)?;
+    }
+    file.download_permission = ask_yes_no("Do you want to allow download permission for this file? (Y/N): ")?;
+    modify_file(PATH, file_id, file).map_err(|e| FileError::InputError(e))?;
+    Ok(())
+}
+
+fn prompt_for_file_id() -> Result<i64, FileError> {
     print!("Insert file ID: ");
-    io::stdout().flush().map_err(|_| "Failed to flush stdout")?;
-    let mut file_id_input: String = String::new();
-    io::stdin().read_line(&mut file_id_input).map_err(|_| "Failed to read from stdin")?;
-    let file_id: i64 = file_id_input.trim().parse::<i64>().map_err(|_| "Please enter a valid ID number.")?;
-    delete_file(PATH, file_id)?;
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut file_id_input = String::new();
+    io::stdin().read_line(&mut file_id_input).map_err(|e| FileError::IOError(e))?;
+    let file_id = file_id_input.trim().parse::<i64>().map_err(|_| FileError::InputError("Invalid ID number.".to_string()))?;
+    Ok(file_id)
+}
+
+fn move_file_to_trash() -> Result<(), FileError> {
+    print!("Insert file ID: ");
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut file_id_input = String::new();
+    io::stdin().read_line(&mut file_id_input).map_err(|e| FileError::IOError(e))?;
+    let file_id: i64 = file_id_input.trim().parse::<i64>().map_err(|_| FileError::ParseError)?;
+    let _ = delete_file(PATH, file_id);
     println!("File ID {} was moved to the trash!", file_id);
     Ok(())
 }
 
-fn system_menu(owner: (i64, String, String)) -> Result<(), String> {
+fn system_menu(owner: (i64, String, String)) -> Result<(), FileError> {
     print_menu_options();
     loop {
-        match get_choosed_option() {
-            Ok(option) if (0..=5).contains(&option) => {
+        match get_choosed_option()? {
+            option if (0..=5).contains(&option) => {
                 match option {
-                    0 => {println!("Exiting..."); break Ok(());},
-                    1 => {let _ = get_files(); break Ok(());},
-                    2 => {get_specific_file()?; break Ok(());},
-                    3 => {store_new_file(owner)?; break Ok(());},
-                    4 => {update_existing_file()?; break Ok(());},
-                    5 => {move_file_to_trash()?; break Ok(());},
+                    0 => {
+                        println!("Exiting...");
+                        break Ok(());
+                    },
+                    1 => {
+                        get_files()?;
+                        break Ok(());
+                    },
+                    2 => {
+                        get_specific_file()?;
+                        break Ok(());
+                    },
+                    3 => {
+                        store_new_file(owner)?;
+                        break Ok(());
+                    },
+                    4 => {
+                        update_existing_file()?;
+                        break Ok(());
+                    },
+                    5 => {
+                        move_file_to_trash()?;
+                        break Ok(());
+                    },
                     _ => unreachable!(),
                 };
             },
-            _ => println!("Please enter a valid number between 0 and 5.")
+            _ => println!("Please enter a valid number between 0 and 5."),
         }
     }
 }
+
 
 fn main() {
     let owner: (i64, String, String) = get_system_owner();
