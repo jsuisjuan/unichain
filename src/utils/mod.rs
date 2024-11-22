@@ -73,3 +73,24 @@ pub fn update_accessed_file_date(mut file: File) -> Result<File, FileError> {
     file.accessed = Some(Utc::now().naive_utc());
     Ok(file)
 }
+
+fn process_input(prompt: &str, allow_empty: bool) -> Result<Option<String>, FileError> {
+    print!("{}", prompt);
+    io::stdout().flush().map_err(FileError::IOError)?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).map_err(FileError::IOError)?;
+    let trimmed_input = input.trim();
+    if trimmed_input.is_empty() {
+        if allow_empty {
+            return Ok(None);
+        } else {
+            error!("Input cannot be empty for prompt '{}'.", prompt);
+            return Err(FileError::InputError("Input cannot be empty.".to_string()));
+        }
+    }
+    Ok(Some(trimmed_input.to_string()))
+}
+
+fn get_system_owner() -> (i64, String, String) {
+    (2454826096558341, String::from("Juan Carvalho Silva de Lima"), String::from("juanc.s.delima@gmail.com"))
+}

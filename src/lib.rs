@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use bincode;
 
 pub mod model;
+pub mod commands;
 use model::{File, FileData, FileError};
 
 pub mod utils;
@@ -71,7 +72,7 @@ pub fn modify_file(path: &str, file_id: i64, updated_file: File) -> Result<(), F
     Ok(())
 }
 
-pub fn delete_file(path: &str, file_id: i64) -> Result<(), FileError> {
+pub fn remove_file(path: &str, file_id: i64) -> Result<(), FileError> {
     let mut files = get_all_files(path)?;
     let initial_length = files.len();
     files.retain(|file| file.id != file_id);
