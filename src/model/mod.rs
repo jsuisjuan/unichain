@@ -1,8 +1,8 @@
-use chrono::NaiveDateTime;
-use std::{io, fmt};
-use serde::{Serialize, Deserialize};
 use std::error::Error;
+use std::{io, fmt};
 
+use serde::{Serialize, Deserialize};
+use chrono::NaiveDateTime;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum FileType {
@@ -40,8 +40,6 @@ pub struct FileData {
     pub name: String,
 }
 
-
-
 #[derive(Debug)]
 pub enum FileError {
     InputError(String),
@@ -56,7 +54,6 @@ pub enum FileError {
     InvalidFileSize,
 }
 
-// Implement Display for FileError
 impl fmt::Display for FileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -74,17 +71,15 @@ impl fmt::Display for FileError {
     }
 }
 
-// Implement the Error trait for FileError
 impl Error for FileError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            FileError::IOError(err) => Some(err), // `IOError` is already an `io::Error`
+            FileError::IOError(err) => Some(err),
             _ => None,
         }
     }
 }
 
-// Implement `From<io::Error>` for `FileError` to simplify conversions
 impl From<io::Error> for FileError {
     fn from(error: io::Error) -> Self {
         FileError::IOError(error)
