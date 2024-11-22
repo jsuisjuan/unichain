@@ -5,49 +5,53 @@ use std::process;
 use chrono::Utc;
 use idgenerator::*;
 use rand::{distributions::Alphanumeric, Rng};
+use log::{info, error};
 
-use crate::model::{File, FileType, FileData};
+use crate::model::{File, FileType, FileData, FileError};
 
-pub fn generate_id() -> i64 {
-    let options: IdGeneratorOptions = IdGeneratorOptions::new().worker_id(1).worker_id_bit_len(6);
-    let _ = IdInstance::init(options).unwrap_or_else(|err| {
-        eprintln!("Error initializing ID generator: {err}");
-        process::exit(1);
-    });
-    IdInstance::next_id()
+pub fn generate_id() -> Result<i64, FileError> {
+    let options = IdGeneratorOptions::new().worker_id(1).worker_id_bit_len(6);
+    if let Err(err) = IdInstance::init(options) {
+        error!("Error initializing ID generator: {}", err);
+        return Err(FileError::IdGenerationError(err.to_string()));
+    }
+    Ok(IdInstance::next_id())
 }
 
 fn generate_fake_hash(length: usize) -> String {
     rand::thread_rng().sample_iter(&Alphanumeric).take(length).map(char::from).collect()
 }
 
-pub fn get_file_type(file_path: &PathBuf) -> FileType {
+pub fn get_file_type(file_path: &PathBuf) -> Result<FileType, FileError> {
     let path: &Path = Path::new(file_path);
     match path.extension().and_then(|ext| ext.to_str()) {
-        Some("pdf") => FileType::Pdf,
-        Some("docx") => FileType::Docx,
-        Some("xls") => FileType::Xls,
-        Some("txt") => FileType::Txt,
-        Some("csv") => FileType::Csv,
-        Some("pptx") => FileType::Pptx,
-        Some("jpg") => FileType::Jpg,
-        Some("png") => FileType::Png,
-        _ => FileType::Unknown,
+        Some("pdf") => Ok(FileType::Pdf),
+        Some("docx") => Ok(FileType::Docx),
+        Some("xls") => Ok(FileType::Xls),
+        Some("txt") => Ok(FileType::Txt),
+        Some("csv") => Ok(FileType::Csv),
+        Some("pptx") => Ok(FileType::Pptx),
+        Some("jpg") => Ok(FileType::Jpg),
+        Some("png") => Ok(FileType::Png),
+        Some(ext) => Err(FileError::InvalidFileType(ext.to_string())),
+        None => Err(FileError::InvalidFileType("Unknown extension".to_string())),
     }
 }
 
-pub fn get_file_size(file_path: &PathBuf) -> std::io::Result<u64> {
-    let metadata: Metadata = metadata(file_path)?;
-    Ok(metadata.len())
+pub fn get_file_size(file_path: &PathBuf) -> Result<u64, FileError> {
+    match std::fs::metadata(file_path) {
+        Ok(metadata) => Ok(metadata.len()),
+        Err(err) => Err(FileError::IOError(err))
+    }
 }
 
-pub fn get_default_file(file_data: &FileData, path: &PathBuf) -> Result<File, String> {
+pub fn get_default_file(file_data: &FileData, path: &PathBuf) -> Result<File, FileError> {
     let owner_access: (i64, String, String) = file_data.owner.clone();
-    let file_size: u64 = get_file_size(path).map_err(|e| e.to_string())?; 
+    let file_size: u64 = get_file_size(path).map_err(|e| e)?; 
     Ok(File {
-        id: generate_id(),
+        id: generate_id()?,
         name: String::new(),
-        file_type: get_file_type(path),
+        file_type: get_file_type(path)?,
         size: file_size,
         created: Utc::now().naive_utc(),
         modified: None,
@@ -61,13 +65,13 @@ pub fn get_default_file(file_data: &FileData, path: &PathBuf) -> Result<File, St
     })
 }
 
-pub fn process_modified_file(mut file: File) -> Result<File, String> {
+pub fn process_modified_file(mut file: File) -> Result<File, FileError> {
     file.modified = Some(Utc::now().naive_utc());
     file.accessed = Some(Utc::now().naive_utc());
     Ok(file)
 }
 
-pub fn update_accessed_file_date(mut file: File) -> Result<File, String> {
+pub fn update_accessed_file_date(mut file: File) -> Result<File, FileError> {
     file.accessed = Some(Utc::now().naive_utc());
     Ok(file)
 }
