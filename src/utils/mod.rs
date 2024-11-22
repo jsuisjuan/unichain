@@ -1,11 +1,9 @@
-use std::fs::{metadata, Metadata};
 use std::path::{Path, PathBuf};
-use std::process;
 
 use chrono::Utc;
 use idgenerator::*;
 use rand::{distributions::Alphanumeric, Rng};
-use log::{info, error};
+use log::error;
 
 use crate::model::{File, FileType, FileData, FileError};
 

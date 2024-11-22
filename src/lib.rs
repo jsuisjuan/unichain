@@ -1,7 +1,6 @@
 use std::fs::File as StdFile;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
-use log::{info, error};
 
 use bincode;
 
