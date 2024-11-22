@@ -1,7 +1,8 @@
 use std::io::{self, Write};
 use log::{info, error};
-use crate::model::FileError;
+
 use crate::get_file;
+use crate::model::FileError;
 
 const PATH: &str = "../assets/";
 

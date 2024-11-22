@@ -1,8 +1,9 @@
 use log::{info, error};
-use crate::model::FileError;
+
+use crate::model::{File,FileError};
 use crate::get_all_files;
 
-const PATH: &str = "../assets/";
+pub const PATH: &str = "../assets";
 
 pub fn list_files() -> Result<(), FileError> {
     info!("Fetching all the files.");

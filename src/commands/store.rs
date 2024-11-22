@@ -1,7 +1,12 @@
 use std::io::{self, Write};
-use log::{info, error};
-use crate::model::{FileData, FileError};
+use std::path::PathBuf;
+use log::error;
+
 use crate::create_new_file;
+use crate::model::{FileData, FileError};
+use crate::utils::{get_system_owner, process_input};
+
+const PATH: &str = "../assets";
 
 pub fn store_file() -> Result<(), FileError> {
     let file_path = prompt_for_file_path()?;

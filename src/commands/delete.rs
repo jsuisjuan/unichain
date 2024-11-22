@@ -1,7 +1,9 @@
 use std::io::{self, Write};
-use log::{info, error};
+
+use crate::remove_file;
 use crate::model::FileError;
-use crate::get_file;
+
+const PATH: &str = "../assets";
 
 pub fn delete_file() -> Result<(), FileError> {
     print!("Insert file ID: ");

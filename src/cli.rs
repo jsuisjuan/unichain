@@ -1,10 +1,8 @@
 use std::io::{self, Write};
 
-pub mod commands;
-use commands::{list_files, view_file, store_file, update_file, delete_file};
-
-pub mod utils;
-use utils::{get_default_file, process_modified_file, update_accessed_file_date};
+use unichain::commands::{list_files, view_file, store_file, update_file, delete_file};
+use unichain::model::FileError;
+use unichain::utils::get_system_owner;
 
 pub fn run() -> Result<(), FileError> {
     let owner: (i64, String, String) = get_system_owner();
@@ -22,7 +20,7 @@ pub fn run() -> Result<(), FileError> {
                     2 => view_file()?,
                     3 => store_file()?,
                     4 => update_file()?,
-                    5 => move_file_to_trash()?,
+                    5 => delete_file()?,
                     _ => unreachable!(),
                 };
             },

@@ -1,7 +1,11 @@
 use std::io::{self, Write};
-use log::{info, error};
-use crate::model::FileError;
-use crate::get_file;
+use log::info;
+
+use crate::{get_file, modify_file};
+use crate::model::{File, FileError};
+use crate::utils::{process_input, generate_id};
+
+const PATH: &str = "../assets";
 
 pub fn update_file() -> Result<(), FileError> {
     let file_id = prompt_for_file_id()?;

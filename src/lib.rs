@@ -6,9 +6,9 @@ use bincode;
 
 pub mod model;
 pub mod commands;
-use model::{File, FileData, FileError};
-
 pub mod utils;
+
+use model::{File, FileData, FileError};
 use utils::{get_default_file, process_modified_file, update_accessed_file_date};
 
 fn load_files_from_file(path: &str) -> Result<Vec<File>, FileError> {
