@@ -30,7 +30,12 @@ fn prompt_for_file_path() -> Result<PathBuf, FileError> {
         error!("File path input is empty.");
         return Err(FileError::InputError("File path cannot be empty.".to_string()));
     }
-    Ok(PathBuf::from(trimmed_path))
+    let path_buf = PathBuf::from(trimmed_path);
+    if !path_buf.exists() {
+        error!("The file at path {:?} does not exist.", path_buf);
+        return Err(FileError::InputError(format!("File not found: {:?}", path_buf)));
+    }
+    Ok(path_buf)
 }
 
 fn extract_filename(path: &PathBuf) -> Result<PathBuf, FileError> {
