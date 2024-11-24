@@ -3,13 +3,13 @@ use log::info;
 
 use crate::{get_file, modify_file};
 use crate::model::{File, FileError};
-use crate::utils::{process_input, generate_id};
+use crate::utils::{process_input, generate_id, prompt_for_file_id};
 
 const PATH: &str = "../assets";
 
 pub fn update_file() -> Result<(), FileError> {
     let file_id = prompt_for_file_id()?;
-    let mut file = get_file(PATH, file_id).map_err(|e| FileError::InputError(e.to_string()))?;
+    let mut file = get_file(PATH, file_id)?;
     info!("Modifying file with ID: {}", file_id);
     file.name = process_input("Add new file name: ", false)?.unwrap();
     file.description = process_input("Add new file description: ", true)?;
@@ -19,15 +19,6 @@ pub fn update_file() -> Result<(), FileError> {
     file.download_permission = ask_yes_no("Do you want to allow download permission for this file? (Y/N): ")?;
     modify_file(PATH, file_id, file).map_err(|e| FileError::InputError(e.to_string()))?;
     Ok(())
-}
-
-fn prompt_for_file_id() -> Result<i64, FileError> {
-    print!("Insert file ID: ");
-    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
-    let mut file_id_input = String::new();
-    io::stdin().read_line(&mut file_id_input).map_err(|e| FileError::IOError(e))?;
-    let file_id = file_id_input.trim().parse::<i64>().map_err(|_| FileError::InputError("Invalid ID number.".to_string()))?;
-    Ok(file_id)
 }
 
 fn ask_yes_no(prompt: &str) -> Result<bool, FileError> {

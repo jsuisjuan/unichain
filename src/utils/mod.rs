@@ -95,3 +95,12 @@ pub fn process_input(prompt: &str, allow_empty: bool) -> Result<Option<String>, 
 pub fn get_system_owner() -> (i64, String, String) {
     (2454826096558341, String::from("Juan Carvalho Silva de Lima"), String::from("juanc.s.delima@gmail.com"))
 }
+
+pub fn prompt_for_file_id() -> Result<i64, FileError> {
+    print!("Insert file ID: ");
+    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+    let mut file_id_input = String::new();
+    io::stdin().read_line(&mut file_id_input).map_err(|e| FileError::IOError(e))?;
+    let file_id = file_id_input.trim().parse::<i64>().map_err(|_| FileError::InputError("Invalid ID number.".to_string()))?;
+    Ok(file_id)
+}

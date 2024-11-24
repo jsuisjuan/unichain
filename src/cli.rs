@@ -1,4 +1,5 @@
 use std::io::{self, Write};
+use log::info;
 
 use unichain::commands::{list_files, view_file, store_file, update_file, delete_file};
 use unichain::model::FileError;
@@ -11,7 +12,7 @@ pub fn run() -> Result<(), FileError> {
         print_menu_options();
         match get_choosed_option()? {
             option => match option {
-                0 => return Ok(println!("\nExiting...")),
+                0 => return Ok(info!("Exiting.\n")),
                 1 => list_files()?,
                 2 => view_file()?,
                 3 => store_file()?,
