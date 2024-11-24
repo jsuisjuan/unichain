@@ -57,15 +57,15 @@ pub enum FileError {
 impl fmt::Display for FileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FileError::InputError(msg) => write!(f, "Input error: {}", msg),
+            FileError::InputError(msg) => write!(f, "Input error :: {}", msg),
             FileError::ParseError => write!(f, "Invalid file ID input, please enter a valid number."),
             FileError::FileNotFound => write!(f, "File not found."),
-            FileError::IOError(err) => write!(f, "I/O error: {}", err),
-            FileError::DeserializationError(msg) => write!(f, "Deserialization error: {}", msg),
+            FileError::IOError(err) => write!(f, "I/O error :: {}", err),
+            FileError::DeserializationError(msg) => write!(f, "Deserialization error :: {}", msg),
             FileError::FileAlreadyExists => write!(f, "The file already exists."),
             FileError::PermissionDenied => write!(f, "Permission denied."),
-            FileError::IdGenerationError(msg) => write!(f, "ID generation error: {}", msg),
-            FileError::InvalidFileType(msg) => write!(f, "Invalid file type: {}", msg),
+            FileError::IdGenerationError(msg) => write!(f, "ID generation error :: {}", msg),
+            FileError::InvalidFileType(msg) => write!(f, "Invalid file type :: {}", msg),
             FileError::InvalidFileSize => write!(f, "Invalid file size."),
         }
     }

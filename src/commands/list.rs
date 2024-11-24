@@ -15,6 +15,6 @@ pub fn list_files() -> Result<(), FileError> {
         }
     };
     info!("Successfully fetched {} files.", files.len());
-    println!("{:?}", files);
+    println!("\n{:?}", files);
     Ok(())
 }
