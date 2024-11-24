@@ -7,14 +7,12 @@ use crate::create_new_file;
 use crate::model::{FileData, FileError};
 use crate::utils::{get_system_owner, process_input};
 
-const PATH: &str = "../assets";
-
 pub fn store_file() -> Result<(), FileError> {
     let file_path = prompt_for_file_path()?;
     let filename = extract_filename(&file_path)?;
     let final_name = ask_for_filename_change(&filename)?;
     let file_data = FileData { owner: get_system_owner(), name: final_name };
-    create_new_file(file_data, &file_path, PATH)?;
+    create_new_file(file_data, &file_path)?;
     Ok(())
 }
 
