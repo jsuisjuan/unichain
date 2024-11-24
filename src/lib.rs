@@ -42,7 +42,6 @@ pub fn create_new_file(file_data: FileData, file_path: &PathBuf, path: &str) -> 
         FileError::IOError(err) => err,
         _ => io::Error::new(io::ErrorKind::Other, "Unknown error"),
     }))?;
-    println!("File created and saved successfully");
     Ok(())
 }
 

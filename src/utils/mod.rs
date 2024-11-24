@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use chrono::Utc;
 use idgenerator::*;
 use rand::{distributions::Alphanumeric, Rng};
-use log::error;
+use log::warn;
 
 use crate::model::{File, FileType, FileData, FileError};
 
@@ -73,20 +73,18 @@ pub fn update_accessed_file_date(mut file: File) -> Result<File, FileError> {
 }
 
 pub fn process_input(prompt: &str, allow_empty: bool) -> Result<Option<String>, FileError> {
-    print!("{}", prompt);
-    io::stdout().flush().map_err(FileError::IOError)?;
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).map_err(FileError::IOError)?;
-    let trimmed_input = input.trim();
-    if trimmed_input.is_empty() {
-        if allow_empty {
-            return Ok(None);
-        } else {
-            error!("Input cannot be empty for prompt '{}'.", prompt);
-            return Err(FileError::InputError("Input cannot be empty.".to_string()));
+    loop {
+        print!("{}", prompt);
+        io::stdout().flush().map_err(FileError::IOError)?;
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).map_err(FileError::IOError)?;
+        let trimmed_input = input.trim();
+        if trimmed_input.is_empty() && !allow_empty {
+            warn!("Input cannot be empty for prompt '{}'. Please try again.", prompt);
+            continue;
         }
+        return Ok(if trimmed_input.is_empty() { None } else { Some(trimmed_input.to_string()) });
     }
-    Ok(Some(trimmed_input.to_string()))
 }
 
 pub fn get_system_owner() -> (i64, String, String) {
@@ -94,10 +92,18 @@ pub fn get_system_owner() -> (i64, String, String) {
 }
 
 pub fn prompt_for_file_id() -> Result<i64, FileError> {
-    print!("Insert file ID: ");
-    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
-    let mut file_id_input = String::new();
-    io::stdin().read_line(&mut file_id_input).map_err(|e| FileError::IOError(e))?;
-    let file_id = file_id_input.trim().parse::<i64>().map_err(|_| FileError::InputError("Invalid ID number.".to_string()))?;
-    Ok(file_id)
+    loop {
+        print!("\nInsert file ID: ");
+        io::stdout().flush().map_err(|e| FileError::IOError(e))?;
+        let mut file_id_input = String::new();
+        io::stdin().read_line(&mut file_id_input).map_err(|e| FileError::IOError(e))?;
+        match file_id_input.trim().parse::<i64>() {
+            Ok(file_id) => return Ok(file_id),
+            Err(_) => {
+                print!("\n");
+                warn!("Invalid ID number. Please enter a valid number.");
+                continue;
+            }
+        }
+    }
 }

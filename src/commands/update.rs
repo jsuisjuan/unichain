@@ -1,5 +1,5 @@
 use std::io::{self, Write};
-use log::info;
+use log::{info, warn};
 
 use crate::{get_file, modify_file};
 use crate::model::{File, FileError};
@@ -8,17 +8,26 @@ use crate::utils::{process_input, generate_id, prompt_for_file_id};
 const PATH: &str = "../assets";
 
 pub fn update_file() -> Result<(), FileError> {
-    let file_id = prompt_for_file_id()?;
-    let mut file = get_file(PATH, file_id)?;
-    info!("Modifying file with ID: {}", file_id);
-    file.name = process_input("Add new file name: ", false)?.unwrap();
-    file.description = process_input("Add new file description: ", true)?;
-    if ask_yes_no("Do you want to change the people with access list? (Y/N): ")? {
-        update_people_with_access(&mut file)?;
+    loop {
+        let file_id = prompt_for_file_id()?;
+        let mut file = match get_file(PATH, file_id) {
+            Ok(file) => file,
+            Err(_) => {
+                print!("\n");
+                warn!("File not found.");
+                continue;
+            }
+        };
+        info!("Modifying file with ID: {}", file_id);
+        file.name = process_input("Add new file name: ", false)?.unwrap();
+        file.description = process_input("Add new file description: ", true)?;
+        if ask_yes_no("Do you want to change the people with access list? (Y/N): ")? {
+            update_people_with_access(&mut file)?;
+        }
+        file.download_permission = ask_yes_no("Do you want to allow download permission for this file? (Y/N): ")?;
+        modify_file(PATH, file_id, file).map_err(|e| FileError::InputError(e.to_string()))?;
+        return Ok(());
     }
-    file.download_permission = ask_yes_no("Do you want to allow download permission for this file? (Y/N): ")?;
-    modify_file(PATH, file_id, file).map_err(|e| FileError::InputError(e.to_string()))?;
-    Ok(())
 }
 
 fn ask_yes_no(prompt: &str) -> Result<bool, FileError> {

@@ -1,5 +1,5 @@
 use std::io::{self, Write};
-use log::info;
+use log::{info, warn};
 
 use unichain::commands::{list_files, view_file, store_file, update_file, delete_file};
 use unichain::model::FileError;
@@ -40,8 +40,8 @@ fn get_choosed_option() -> Result<u8, FileError> {
         io::stdin().read_line(&mut choosed_option).map_err(|e| FileError::IOError(e))?;
         match choosed_option.trim().parse::<u8>() {
             Ok(num) if (0..=5).contains(&num) => return Ok(num),
-            Ok(_) => println!("\n{}", FileError::InputError("The number must be between 0 and 5.".to_string())),
-            Err(_) => println!("\n{}", FileError::InputError("Invalid digit found in string, please enter a number.".to_string())),
+            Ok(_) => warn!("The number must be between 0 and 5."),
+            Err(_) => warn!("Invalid digit found in string, please enter a number.")
         }
     }
 }
