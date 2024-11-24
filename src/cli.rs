@@ -12,7 +12,10 @@ pub fn run() -> Result<(), FileError> {
         print_menu_options();
         match get_choosed_option()? {
             option => match option {
-                0 => return Ok(info!("Exiting.\n")),
+                0 => return Ok({
+                    print!("\n");
+                    info!("Exiting.\n")
+                }),
                 1 => list_files()?,
                 2 => view_file()?,
                 3 => store_file()?,

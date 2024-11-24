@@ -10,10 +10,7 @@ use crate::model::{File, FileType, FileData, FileError};
 
 pub fn generate_id() -> Result<i64, FileError> {
     let options = IdGeneratorOptions::new().worker_id(1).worker_id_bit_len(6);
-    if let Err(err) = IdInstance::init(options) {
-        error!("Error initializing ID generator: {}", err);
-        return Err(FileError::IdGenerationError(err.to_string()));
-    }
+    IdInstance::init(options).map_err(|err| FileError::IdGenerationError(format!("Error initializing ID generator: {}", err)))?;
     Ok(IdInstance::next_id())
 }
 
@@ -22,7 +19,7 @@ fn generate_fake_hash(length: usize) -> String {
 }
 
 pub fn get_file_type(file_path: &PathBuf) -> Result<FileType, FileError> {
-    let path: &Path = Path::new(file_path);
+    let path = Path::new(file_path);
     match path.extension().and_then(|ext| ext.to_str()) {
         Some("pdf") => Ok(FileType::Pdf),
         Some("docx") => Ok(FileType::Docx),
@@ -45,8 +42,8 @@ pub fn get_file_size(file_path: &PathBuf) -> Result<u64, FileError> {
 }
 
 pub fn get_default_file(file_data: &FileData, path: &PathBuf) -> Result<File, FileError> {
-    let owner_access: (i64, String, String) = file_data.owner.clone();
-    let file_size: u64 = get_file_size(path).map_err(|e| e)?; 
+    let owner_access = file_data.owner.clone();
+    let file_size = get_file_size(path).map_err(|e| e)?; 
     Ok(File {
         id: generate_id()?,
         name: String::new(),
