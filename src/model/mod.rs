@@ -4,7 +4,7 @@ use std::{io, fmt};
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDateTime;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum FileType {
     Pdf,
     Docx,
@@ -17,7 +17,7 @@ pub enum FileType {
     Unknown
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct File {
     pub id: i64,
     pub name: String,

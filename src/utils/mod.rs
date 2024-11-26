@@ -14,7 +14,7 @@ pub fn generate_id() -> Result<i64, FileError> {
     Ok(IdInstance::next_id())
 }
 
-fn generate_fake_hash(length: usize) -> String {
+pub fn generate_fake_hash(length: usize) -> String {
     rand::thread_rng().sample_iter(&Alphanumeric).take(length).map(char::from).collect()
 }
 
