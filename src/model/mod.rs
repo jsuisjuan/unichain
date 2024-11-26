@@ -34,7 +34,7 @@ pub struct File {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FileData {
     pub owner: (i64, String, String),
     pub name: String,

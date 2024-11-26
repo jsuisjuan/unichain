@@ -97,20 +97,31 @@ mod tests {
     use std::env;
     use std::fs;
     use chrono::Utc;
+    use std::path::PathBuf;
     use tempfile::tempdir;
     use utils::generate_fake_hash;
 
     fn get_test_file() -> File {
         let owner = (1, String::from("Username"), String::from("username@gmail.com"));
         let owner_access = owner.clone();
-        File { id: 1, name: "test-file".to_string(), file_type: model::FileType::Pdf, size: 100, created: Utc::now().naive_utc(), modified: None, accessed: None, owner, people_with_access: vec![owner_access], ipfs_hash: generate_fake_hash(46), onchain_txn_id: generate_fake_hash(64), download_permission: false, description: None }
+        File { 
+            id: 1, name: "test-file".to_string(), file_type: model::FileType::Pdf, size: 100, 
+            created: Utc::now().naive_utc(), modified: None, accessed: None, owner, 
+            people_with_access: vec![owner_access], ipfs_hash: generate_fake_hash(46), 
+            onchain_txn_id: generate_fake_hash(64), download_permission: false, description: None 
+        }
+    }
+
+    fn setup_temp_file() -> PathBuf {
+        let tem_dir = tempdir().unwrap();
+        let test_file_path = tem_dir.path().join("test_file.bin");
+        env::set_var("ASSETS_PATH", test_file_path.to_str().unwrap());
+        test_file_path
     }
 
     #[test]
     fn test_load_files_from_empty_file() {
-        let tem_dir = tempdir().unwrap();
-        let test_file_path = tem_dir.path().join("test_file.bin");
-        env::set_var("ASSETS_PATH", test_file_path.to_str().unwrap());
+        let test_file_path = setup_temp_file();
         let result = load_files_from_file();
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Vec::new());
@@ -119,9 +130,7 @@ mod tests {
 
     #[test]
     fn test_save_and_load_files() {
-        let tem_dir = tempdir().unwrap();
-        let test_file_path = tem_dir.path().join("test_file.bin");
-        env::set_var("ASSETS_PATH", test_file_path.to_str().unwrap());
+        let test_file_path = setup_temp_file();
         let file = get_test_file();
         let files = vec![file.clone()];
         let save_result = save_files_to_file(&files);
@@ -130,5 +139,66 @@ mod tests {
         assert!(load_result.is_ok());
         assert_eq!(load_result.unwrap(), files);
         fs::remove_file(test_file_path).ok();
+    }
+
+    #[test]
+    fn test_add_files_to_file() {
+        let test_file_path = setup_temp_file();
+        let file = get_test_file();
+        let add_result = add_files_to_file(file.clone());
+        assert!(add_result.is_ok());
+        let files = load_files_from_file().unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0], file);
+        fs::remove_file(test_file_path).ok();
+    }
+
+    #[test]
+    fn test_create_new_file() {
+        let test_file_path = setup_temp_file();
+        let owner = (1, String::from("username"), String::from("username@gmail.com"));
+        let file_data = FileData { owner, name: "created-file".to_string()};
+        let create_result = create_new_file(file_data.clone(), &test_file_path);
+        assert!(create_result.is_ok());
+        let files = load_files_from_file().unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].name, file_data.name);
+        fs::remove_file(test_file_path).is_ok();
+    }
+
+    #[test]
+    fn test_remove_file() {
+        let test_file_path = setup_temp_file();
+        let file = get_test_file();
+        add_files_to_file(file.clone()).unwrap();
+        let remove_result = remove_file(file.id);
+        assert!(remove_result.is_ok());
+        let files = load_files_from_file().unwrap();
+        assert!(files.is_empty());
+        fs::remove_file(test_file_path).is_ok();
+    }
+
+    #[test]
+    fn test_get_file() {
+        let test_file_path = setup_temp_file();
+        let file = get_test_file();
+        add_files_to_file(file.clone()).unwrap();
+        let get_result = get_file(file.id);
+        assert!(get_result.is_ok());
+        assert_eq!(get_result.unwrap().id, file.id);
+        fs::remove_file(test_file_path).is_ok();
+    }
+
+    #[test]
+    fn test_modify_file() {
+        let test_file_path = setup_temp_file();
+        let file = get_test_file();
+        add_files_to_file(file.clone()).unwrap();
+        let updated_file = get_test_file();
+        let modify_result = modify_file(file.id, updated_file.clone());
+        assert!(modify_result.is_ok());
+        let files = load_files_from_file().unwrap();
+        assert_eq!(files[0].name, "Updated");
+        fs::remove_file(test_file_path).is_ok();
     }
 }
