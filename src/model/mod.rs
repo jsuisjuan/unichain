@@ -71,6 +71,25 @@ impl fmt::Display for FileError {
     }
 }
 
+impl PartialEq for FileError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (FileError::InputError(a), FileError::InputError(b)) => a == b,
+            (FileError::ParseError, FileError::ParseError) => true,
+            (FileError::FileNotFound, FileError::FileNotFound) => true,
+            (FileError::IOError(a), FileError::IOError(b)) => a.kind() == b.kind(),
+            (FileError::DeserializationError(a), FileError::DeserializationError(b)) => a == b,
+            (FileError::FileAlreadyExists, FileError::FileAlreadyExists) => true,
+            (FileError::PermissionDenied, FileError::PermissionDenied) => true,
+            (FileError::IdGenerationError(a), FileError::IdGenerationError(b)) => a == b,
+            (FileError::InvalidFileType(a), FileError::InvalidFileType(b)) => a == b,
+            (FileError::InvalidFileSize, FileError::InvalidFileSize) => true,
+            _ => false,
+        }
+    }
+}
+
+
 impl Error for FileError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {

@@ -113,19 +113,20 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
     use chrono::Utc;
+    use std::fs::File as FsFile;
     use crate::model::{File, FileType, FileData, FileError};
 
     #[test]
     fn test_generate_id_success() {
         let result = generate_id();
         assert!(result.is_ok());
-        assert!(result.unwrap() > 0);  // Assuming a positive ID is generated
+        assert!(result.unwrap() > 0);
     }
 
     #[test]
     fn test_generate_fake_hash() {
         let hash = generate_fake_hash(16);
-        assert_eq!(hash.len(), 16);  // Test if generated hash has correct length
+        assert_eq!(hash.len(), 16);
     }
 
     #[test]
@@ -146,35 +147,33 @@ mod tests {
     fn test_get_file_size_valid() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test_file.txt");
-        File::create(&file_path).unwrap();
+        FsFile::create(&file_path).unwrap();
         let result = get_file_size(&file_path);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0);  // File is empty, so size should be 0
+        assert_eq!(result.unwrap(), 0);
     }
 
     #[test]
     fn test_get_file_size_invalid() {
         let file_path = PathBuf::from("/invalid/path/to/file.txt");
         let result = get_file_size(&file_path);
-        assert!(result.is_err());  // File should not exist
+        assert!(result.is_err());
     }
 
     #[test]
     fn test_get_default_file_success() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test_file.txt");
-        File::create(&file_path).unwrap();
-
+        FsFile::create(&file_path).unwrap();
         let file_data = FileData {
-            owner: String::from("Juan Carvalho Silva de Lima"),
+            owner: (1, String::from("Juan"), String::from("juan.carvalho@gmail.com")),
+            name: String::from("file-name")
         };
-
         let result = get_default_file(&file_data, &file_path);
         assert!(result.is_ok());
-
         let file = result.unwrap();
         assert_eq!(file.owner, file_data.owner);
-        assert_eq!(file.size, 0);  // File is empty
+        assert_eq!(file.size, 0);
     }
 
     #[test]
@@ -187,7 +186,7 @@ mod tests {
             created: Utc::now().naive_utc(),
             modified: None,
             accessed: None,
-            owner: String::from("Juan"),
+            owner: (1, String::from("Juan"), String::from("juan.carvalho@gmail.com")),
             people_with_access: vec![],
             ipfs_hash: String::from("hash"),
             onchain_txn_id: String::from("txn_id"),
@@ -212,14 +211,13 @@ mod tests {
             created: Utc::now().naive_utc(),
             modified: None,
             accessed: None,
-            owner: String::from("Juan"),
+            owner: (1, String::from("Juan"), String::from("juan.carvalho@gmail.com")),
             people_with_access: vec![],
             ipfs_hash: String::from("hash"),
             onchain_txn_id: String::from("txn_id"),
             download_permission: false,
             description: None,
         };
-
         let result = update_accessed_file_date(file);
         assert!(result.is_ok());
         let updated_file = result.unwrap();
@@ -228,7 +226,6 @@ mod tests {
 
     #[test]
     fn test_process_input_non_empty_success() {
-        // Simulate user input for a non-empty prompt
         let user_input = "Test Input".to_string();
         let result = process_input("Enter something: ", false);
         assert_eq!(result, Ok(Some(user_input)));
@@ -236,16 +233,14 @@ mod tests {
 
     #[test]
     fn test_process_input_empty_success() {
-        // Simulate user input for an empty prompt
         let result = process_input("Enter something: ", true);
-        assert_eq!(result, Ok(None));  // Allowing empty input
+        assert_eq!(result, Ok(None));
     }
 
     #[test]
     fn test_process_input_empty_fail() {
-        // Simulate empty input when not allowed
         let result = process_input("Enter something: ", false);
-        assert!(result.is_err());  // Expected to fail since input is empty and not allowed
+        assert!(result.is_err());
     }
 
     #[test]
@@ -258,17 +253,15 @@ mod tests {
 
     #[test]
     fn test_prompt_for_file_id_success() {
-        // Simulate valid user input for file ID
-        let user_input = "12345".to_string();
+        let _user_input = "12345".to_string();
         let result = prompt_for_file_id();
         assert_eq!(result, Ok(12345));
     }
 
     #[test]
     fn test_prompt_for_file_id_invalid() {
-        // Simulate invalid user input for file ID
-        let user_input = "abc".to_string();
+        let _user_input = "abc".to_string();
         let result = prompt_for_file_id();
-        assert!(result.is_err());  // Invalid input
+        assert!(result.is_err());
     }
 }
