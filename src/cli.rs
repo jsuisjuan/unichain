@@ -46,4 +46,66 @@ fn get_choosed_option() -> Result<u8, FileError> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{self, Write};
+    use crate::{FileError, get_choosed_option}
+
+    // Helper function to simulate user input
+    fn mock_input(input: &str) -> io::Result<String> {
+        let mut input = input.to_string();
+        let mut stdout = io::stdout();
+        let mut input_buf = input.as_bytes().to_vec();
+        stdout.write_all(&input_buf)?;
+        Ok(input)
+    }
+
+    #[test]
+    fn test_valid_option_0() {
+        let input = "0\n";
+        mock_input(input).expect("Failed to simulate input");
+
+        let result = get_choosed_option();
+        assert_eq!(result, Ok(0));
+    }
+
+    #[test]
+    fn test_valid_option_5() {
+        let input = "5\n";
+        mock_input(input).expect("Failed to simulate input");
+
+        let result = get_choosed_option();
+        assert_eq!(result, Ok(5));
+    }
+
+    #[test]
+    fn test_invalid_option_above_range() {
+        let input = "6\n";
+        mock_input(input).expect("Failed to simulate input");
+
+        let result = get_choosed_option();
+        // Ensure the function warns about the invalid input
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_option_non_numeric() {
+        let input = "abc\n";
+        mock_input(input).expect("Failed to simulate input");
+
+        let result = get_choosed_option();
+        // Ensure the function warns about the invalid input
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let input = "\n";
+        mock_input(input).expect("Failed to simulate input");
+
+        let result = get_choosed_option();
+        assert!(result.is_err());
+    }
+}
 

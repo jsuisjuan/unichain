@@ -163,7 +163,7 @@ mod tests {
         let files = load_files_from_file().unwrap();
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].name, file_data.name);
-        fs::remove_file(test_file_path).is_ok();
+        fs::remove_file(test_file_path).ok();
     }
 
     #[test]
@@ -175,7 +175,7 @@ mod tests {
         assert!(remove_result.is_ok());
         let files = load_files_from_file().unwrap();
         assert!(files.is_empty());
-        fs::remove_file(test_file_path).is_ok();
+        fs::remove_file(test_file_path).ok();
     }
 
     #[test]
@@ -186,7 +186,7 @@ mod tests {
         let get_result = get_file(file.id);
         assert!(get_result.is_ok());
         assert_eq!(get_result.unwrap().id, file.id);
-        fs::remove_file(test_file_path).is_ok();
+        fs::remove_file(test_file_path).ok();
     }
 
     #[test]
@@ -199,6 +199,6 @@ mod tests {
         assert!(modify_result.is_ok());
         let files = load_files_from_file().unwrap();
         assert_eq!(files[0].name, "Updated");
-        fs::remove_file(test_file_path).is_ok();
+        fs::remove_file(test_file_path).ok();
     }
 }

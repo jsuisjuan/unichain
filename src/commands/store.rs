@@ -60,3 +60,93 @@ fn ask_for_filename_change(current_name: &PathBuf) -> Result<String, FileError> 
         Ok(current_name.to_string_lossy().into_owned())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{self, Write};
+    use std::fs::{self, File};
+    use tempfile::tempdir;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_prompt_for_file_path_valid() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test_file.txt");
+        File::create(&file_path).unwrap();
+
+        // Simulate the user entering the file path
+        let user_input = file_path.to_str().unwrap().to_string();
+        let result = prompt_for_file_path();
+
+        assert_eq!(result, Ok(file_path));
+    }
+
+    #[test]
+    fn test_prompt_for_file_path_invalid_path() {
+        // Simulate invalid file path input
+        let invalid_path = "/invalid/path/to/file.txt".to_string();
+        
+        let result = prompt_for_file_path();
+        assert!(result.is_err()); // Expected to fail since the file doesn't exist
+    }
+
+    #[test]
+    fn test_prompt_for_empty_path() {
+        // Simulate empty input
+        let empty_input = "".to_string();
+        
+        let result = prompt_for_file_path();
+        assert!(result.is_err()); // Expected to fail since the input is empty
+    }
+
+
+    #[test]
+    fn test_extract_filename_valid() {
+        let path = PathBuf::from("/some/path/to/file.txt");
+        let result = extract_filename(&path);
+
+        assert_eq!(result, Ok(PathBuf::from("file.txt")));
+    }
+
+    #[test]
+    fn test_extract_filename_invalid() {
+        let path = PathBuf::from("/some/path/to/");
+        let result = extract_filename(&path);
+
+        assert_eq!(result, Err(FileError::InputError("Invalid file path".to_string())));
+    }
+    
+    #[test]
+    fn test_ask_for_filename_change_yes() {
+        let current_name = PathBuf::from("old_name.txt");
+        
+        // Simulate the user input 'Y' for yes
+        let user_input = "Y".to_string();
+        let result = ask_for_filename_change(&current_name);
+
+        assert_eq!(result, Ok("new_name.txt".to_string()));
+    }
+
+    #[test]
+    fn test_ask_for_filename_change_no() {
+        let current_name = PathBuf::from("old_name.txt");
+
+        // Simulate the user input 'N' for no
+        let user_input = "N".to_string();
+        let result = ask_for_filename_change(&current_name);
+
+        assert_eq!(result, Ok("old_name.txt".to_string()));
+    }
+
+    #[test]
+    fn test_ask_for_filename_change_empty_name() {
+        let current_name = PathBuf::from("old_name.txt");
+
+        // Simulate user input 'Y' and an empty new name
+        let user_input = "Y".to_string();
+        let result = ask_for_filename_change(&current_name);
+
+        assert_eq!(result, Err(FileError::InputError("New file name cannot be empty.".to_string())));
+    }
+}
