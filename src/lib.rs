@@ -1,5 +1,5 @@
 use std::fs::File as StdFile;
-use std::io::{self, Read, Write};
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::env;
 
@@ -24,7 +24,7 @@ fn get_path() -> PathBuf {
     }
 }
 
-fn load_files_from_file(path: &PathBuf) -> Result<Vec<File>, FileError> {
+pub fn load_files_from_file(path: &PathBuf) -> Result<Vec<File>, FileError> {
     let mut file = StdFile::open(&path).map_err(|e| FileError::IOError(e))?;
     let mut encoded = Vec::new();
     file.read_to_end(&mut encoded).map_err(|e| FileError::IOError(e))?;
@@ -51,15 +51,9 @@ pub fn create_new_file(file_data: FileData, file_path: &PathBuf) -> Result<(), F
     Ok(())
 }
 
-pub fn get_all_files() -> Result<Vec<File>, FileError> {
-    load_files_from_file(&get_path()).map_err(|e| FileError::IOError(match e {
-        FileError::IOError(err) => err,
-        _ => io::Error::new(io::ErrorKind::Other, "Error loading file"),
-    }))
-}
-
 pub fn get_file(file_id: i64) -> Result<File, FileError> {
-    let mut files = get_all_files()?;
+    let path = get_path();
+    let mut files = load_files_from_file(&path)?;
     let file_index = files.iter().position(|file| file.id == file_id).ok_or(FileError::FileNotFound)?;
     {
         let file = &mut files[file_index];
@@ -70,21 +64,23 @@ pub fn get_file(file_id: i64) -> Result<File, FileError> {
 }
 
 pub fn modify_file(file_id: i64, updated_file: File) -> Result<(), FileError> {
-    let mut files = get_all_files()?;
+    let path = get_path();
+    let mut files = load_files_from_file(&path)?;
     let file_index = files.iter().position(|file| file.id == file_id).ok_or(FileError::FileNotFound)?;
     files[file_index] = process_modified_file(updated_file)?;
-    save_files_to_file(&files, &get_path())?;
+    save_files_to_file(&files, &path)?;
     Ok(())
 }
 
 pub fn remove_file(file_id: i64) -> Result<(), FileError> {
-    let mut files = get_all_files()?;
+    let path = get_path();
+    let mut files = load_files_from_file(&path)?;
     let initial_length = files.len();
     files.retain(|file| file.id != file_id);
     if files.len() == initial_length {
         return Err(FileError::FileNotFound);
     }
-    save_files_to_file(&files, &get_path())?;
+    save_files_to_file(&files, &path)?;
     Ok(())
 }
 
@@ -182,45 +178,62 @@ mod tests {
         env::remove_var("ASSETS_PATH");
     }
 
-    // #[test]
-    // fn test_remove_file() {
-    //     let tem_dir = tempdir().unwrap();
-    //     let test_file_path = tem_dir.path().join("test_file.bin");
-    //     env::set_var("ASSETS_PATH", test_file_path.to_str().unwrap());
-    //     let file = get_test_file();
-    //     add_files_to_file(file.clone()).unwrap();
-    //     let remove_result = remove_file(file.id);
-    //     assert!(remove_result.is_ok());
-    //     let files = load_files_from_file().unwrap();
-    //     assert!(files.is_empty());
-    //     fs::remove_file(test_file_path).ok();
-    // }
+    #[test]
+    fn test_remove_file() {
+        let (test_file_path, _temp_dir) = setup_temp_file();
+        let file = get_test_file();
+        let files = vec![file.clone()];
 
-    // #[test]
-    // fn test_get_file() {
-    //     let tem_dir = tempdir().unwrap();
-    //     let test_file_path = tem_dir.path().join("test_file.bin");
-    //     env::set_var("ASSETS_PATH", test_file_path.to_str().unwrap());
-    //     let file = get_test_file();
-    //     add_files_to_file(file.clone()).unwrap();
-    //     let get_result = get_file(file.id);
-    //     assert!(get_result.is_ok());
-    //     assert_eq!(get_result.unwrap().id, file.id);
-    //     fs::remove_file(test_file_path).ok();
-    // }
+        let save_result = save_files_to_file(&files, &test_file_path);
+        assert!(save_result.is_ok(), "Save failed: {:?}", save_result);
+        assert!(test_file_path.exists(), "File was not created at: {:?}", test_file_path);
 
-    // #[test]
-    // fn test_modify_file() {
-    //     let tem_dir = tempdir().unwrap();
-    //     let test_file_path = tem_dir.path().join("test_file.bin");
-    //     env::set_var("ASSETS_PATH", test_file_path.to_str().unwrap());
-    //     let file = get_test_file();
-    //     add_files_to_file(file.clone()).unwrap();
-    //     let updated_file = get_test_file();
-    //     let modify_result = modify_file(file.id, updated_file.clone());
-    //     assert!(modify_result.is_ok());
-    //     let files = load_files_from_file().unwrap();
-    //     assert_eq!(files[0].name, "test-file");
-    //     fs::remove_file(test_file_path).ok();
-    // }
+        let file_id = 1;
+        let remove_result = remove_file(file_id);
+        assert!(remove_result.is_ok(), "Failed to delete file: {:?}", remove_result);
+
+        let files = load_files_from_file(&test_file_path).expect("Failed to load files");
+        assert!(files.is_empty(), "File is not empty");
+
+        env::remove_var("ASSETS_PATH");
+    }
+
+    #[test]
+    fn test_get_file() {
+        let (test_file_path, _temp_dir) = setup_temp_file();
+        let file = get_test_file();
+        let files = vec![file.clone()];
+
+        let save_result = save_files_to_file(&files, &test_file_path);
+        assert!(save_result.is_ok(), "Save failed: {:?}", save_result);
+        assert!(test_file_path.exists(), "File was not created at: {:?}", test_file_path);
+
+        let get_result = get_file(file.id);
+        assert!(get_result.is_ok(), "File was not found: {:?}", get_result);
+        assert_eq!(get_result.unwrap().id, file.id, "File ID mismatch");
+
+        env::remove_var("ASSETS_PATH");
+    }
+
+    #[test]
+    fn test_modify_file() {
+        let (test_file_path, _temp_dir) = setup_temp_file();
+        let file = get_test_file();
+        let files = vec![file.clone()];
+
+        let save_result = save_files_to_file(&files, &test_file_path);
+        assert!(save_result.is_ok(), "Save failed: {:?}", save_result);
+        assert!(test_file_path.exists(), "File was not created at: {:?}", test_file_path);
+
+        let mut updated_file = get_test_file();
+        updated_file.id = 2;
+        updated_file.name = String::from("updated-file");
+        let modify_result = modify_file(file.id, updated_file.clone());
+        assert!(modify_result.is_ok(), "File was not updated: {:?}", modify_result);
+
+        let files = load_files_from_file(&test_file_path).expect("Failed to load files");
+        assert_eq!(files[0].name, "updated-file", "File name mismatch");
+
+        env::remove_var("ASSETS_PATH");
+    }
 }
