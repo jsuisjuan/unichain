@@ -21,9 +21,9 @@ pub enum FileType {
 pub struct File {
     pub id: i64,
     pub name: String,
-    pub file_type: FileType,
-    pub size: u64,
-    pub created: NaiveDateTime,
+    pub file_type: FileType, //talvez altera
+    pub size: u64, //altera
+    pub created: NaiveDateTime, //altera
     pub modified: Option<NaiveDateTime>,
     pub accessed: Option<NaiveDateTime>,
     pub owner: (i64, String, String),

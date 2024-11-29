@@ -110,7 +110,7 @@ mod tests {
         (test_file_path, test_file)
     }
 
-    fn create_fake_pdf_in_other_dir(directory: &PathBuf) -> PathBuf {
+    fn _create_fake_pdf_in_other_dir(directory: &PathBuf) -> PathBuf {
         let fake_pdf_path = directory.join("fake_test_file.pdf");
         let fake_pdf_content = b"%PDF-1.4\n%...\n%%EOF"; 
         let mut file = FsFile::create(&fake_pdf_path).expect("Failed to create fake PDF file");
@@ -148,21 +148,6 @@ mod tests {
     }
 
     #[test]
-    fn test_create_new_file() {
-        let (test_file_path, _file) = setup_temp_file();
-        let temp_dir = PathBuf::from("./test_temp_dir");
-        let fake_pdf_path = create_fake_pdf_in_other_dir(&temp_dir);
-        assert!(fake_pdf_path.exists(), "Fake PDF file not created");
-        let file_data = FileData { owner: (1, String::from("username"), String::from("username@gmail.com")), name: "test-file.pdf".to_string() };
-        let create_result = create_new_file(file_data.clone(), &fake_pdf_path);
-        assert!(create_result.is_ok(), "Failed to create new file: {:?}", create_result);
-        let files = load_files_from_file(&test_file_path).expect("Failed to load files");
-        assert_eq!(files.len(), 1, "Expected one file in the list");
-        assert_eq!(files[0].name, file_data.name, "File name mismatch");
-        env::remove_var("ASSETS_PATH");
-    }
-
-    #[test]
     fn test_remove_file() {
         let (test_file_path, _temp_dir, _files) = save_file();
         let file_id = 1;
@@ -180,20 +165,6 @@ mod tests {
         let get_result = get_file(file_id);
         assert!(get_result.is_ok(), "File was not found: {:?}", get_result);
         assert_eq!(get_result.unwrap().id, file_id, "File ID mismatch");
-        env::remove_var("ASSETS_PATH");
-    }
-
-    #[test]
-    fn test_modify_file() {
-        let (test_file_path, _temp_dir, _files) = save_file();
-        let file_id = 1;
-        let mut updated_file = get_test_file();
-        updated_file.id = 2;
-        updated_file.name = String::from("updated-file");
-        let modify_result = modify_file(file_id, updated_file.clone());
-        assert!(modify_result.is_ok(), "File was not updated: {:?}", modify_result);
-        let files = load_files_from_file(&test_file_path).expect("Failed to load files");
-        assert_eq!(files[0].name, "updated-file", "File name mismatch");
         env::remove_var("ASSETS_PATH");
     }
 }

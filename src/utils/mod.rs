@@ -1,7 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::io::{self, Write};
 
-use chrono::Utc;
+use chrono::{NaiveDate, NaiveDateTime, Utc};
 use idgenerator::*;
 use rand::{distributions::Alphanumeric, Rng};
 use log::warn;
@@ -18,38 +18,69 @@ pub fn generate_fake_hash(length: usize) -> String {
     rand::thread_rng().sample_iter(&Alphanumeric).take(length).map(char::from).collect()
 }
 
-pub fn get_file_type(file_path: &PathBuf) -> Result<FileType, FileError> {
-    let path = Path::new(file_path);
-    match path.extension().and_then(|ext| ext.to_str()) {
-        Some("pdf") => Ok(FileType::Pdf),
-        Some("docx") => Ok(FileType::Docx),
-        Some("xls") => Ok(FileType::Xls),
-        Some("txt") => Ok(FileType::Txt),
-        Some("csv") => Ok(FileType::Csv),
-        Some("pptx") => Ok(FileType::Pptx),
-        Some("jpg") => Ok(FileType::Jpg),
-        Some("png") => Ok(FileType::Png),
-        Some(ext) => Err(FileError::InvalidFileType(ext.to_string())),
-        None => Err(FileError::InvalidFileType("Unknown extension".to_string())),
+pub fn get_file_type_from_input() -> Result<FileType, FileError> {
+    print!("Enter the file type (pdf, docx, xls, txt, csv, pptx, jpg, png): ");
+    io::stdout().flush().map_err(|_| FileError::IOError(std::io::Error::new(io::ErrorKind::Other, "Failed to flush output")))?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).map_err(|_| FileError::IOError(std::io::Error::new(io::ErrorKind::Other, "Failed to read input")))?;
+    let file_type = input.trim().to_lowercase();
+    match file_type.as_str() {
+        "pdf" => Ok(FileType::Pdf),
+        "docx" => Ok(FileType::Docx),
+        "xls" => Ok(FileType::Xls),
+        "txt" => Ok(FileType::Txt),
+        "csv" => Ok(FileType::Csv),
+        "pptx" => Ok(FileType::Pptx),
+        "jpg" => Ok(FileType::Jpg),
+        "png" => Ok(FileType::Png),
+        _ => Err(FileError::InvalidFileType(format!("Unsupported file type: {}", file_type))),
     }
 }
 
-pub fn get_file_size(file_path: &PathBuf) -> Result<u64, FileError> {
-    match std::fs::metadata(file_path) {
-        Ok(metadata) => Ok(metadata.len()),
-        Err(err) => Err(FileError::IOError(err))
+
+pub fn get_file_size() -> Result<u64, FileError> {
+    print!("Insert a size (in bytes) to allocate the file: ");
+    io::stdout().flush().map_err(FileError::IOError)?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).map_err(FileError::IOError)?;
+    let size = input.trim().parse::<u64>().map_err(|_| FileError::ParseError)?;
+    if size == 0 {
+        return Err(FileError::InputError("Size cannot be zero.".to_string()));
     }
+    Ok(size)
 }
 
-pub fn get_default_file(file_data: &FileData, path: &PathBuf) -> Result<File, FileError> {
+pub fn parse_date_input() -> Result<NaiveDateTime, String> {
+    print!("Enter the creation date (DD/MM/YYYY): ");
+    io::stdout().flush().map_err(|_| "Failed to flush output".to_string())?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).map_err(|_| "Failed to read input".to_string())?;
+    let input = input.trim();
+    let date_parts: Vec<&str> = input.split('/').collect();
+    if date_parts.len() != 3 {
+        return Err("Invalid date format. Please use DD/MM/YYYY.".to_string());
+    }
+    let day: u32 = date_parts[0].parse().map_err(|_| "Invalid day.".to_string())?;
+    let month: u32 = date_parts[1].parse().map_err(|_| "Invalid month.".to_string())?;
+    let year: i32 = date_parts[2].parse().map_err(|_| "Invalid year.".to_string())?;
+    let date = NaiveDate::from_ymd_opt(year, month, day).ok_or("Invalid date.")?;
+    let now = Utc::now().naive_utc();
+    let created_time = NaiveDateTime::new(date, now.time());
+    Ok(created_time)
+}
+
+
+pub fn get_default_file(file_data: &FileData, _path: &PathBuf) -> Result<File, FileError> {
     let owner_access = file_data.owner.clone();
-    let file_size = get_file_size(path).map_err(|e| e)?; 
+    let file_size = get_file_size().map_err(|e| e)?;
+    let created_date = parse_date_input().unwrap();
+    let file_type = get_file_type_from_input()?;
     Ok(File {
         id: generate_id()?,
         name: String::new(),
-        file_type: get_file_type(path)?,
+        file_type: file_type,
         size: file_size,
-        created: Utc::now().naive_utc(),
+        created: created_date,
         modified: None,
         accessed: None,
         owner: file_data.owner.clone(),
@@ -62,7 +93,9 @@ pub fn get_default_file(file_data: &FileData, path: &PathBuf) -> Result<File, Fi
 }
 
 pub fn process_modified_file(mut file: File) -> Result<File, FileError> {
-    file.modified = Some(Utc::now().naive_utc());
+    file.size = get_file_size().map_err(|e| e)?;
+    file.file_type = get_file_type_from_input()?;
+    file.modified = Some(parse_date_input().unwrap());
     file.accessed = Some(Utc::now().naive_utc());
     Ok(file)
 }
@@ -118,26 +151,11 @@ pub fn handle_input() -> Result<String, FileError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
     #[test]
     fn test_generate_fake_hash() {
         let hash = generate_fake_hash(10);
         assert_eq!(hash.len(), 10);
         assert!(hash.chars().all(|c| c.is_ascii_alphanumeric()));
-    }
-
-    #[test]
-    fn test_get_file_type_valid() {
-        let path = PathBuf::from("test.pdf");
-        let file_type = get_file_type(&path).unwrap();
-        assert_eq!(file_type, FileType::Pdf);
-    }
-
-    #[test]
-    fn test_get_file_type_invalid() {
-        let path = PathBuf::from("test.unknown");
-        let result = get_file_type(&path);
-        assert!(result.is_err());
-    }   
+    }  
 }
