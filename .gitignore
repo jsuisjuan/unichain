@@ -1,3 +1,4 @@
 /target
 /test
+/test_temp_dir
 .env

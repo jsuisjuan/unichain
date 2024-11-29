@@ -1,40 +1,32 @@
-use std::io::{self, Write};
 use std::path::PathBuf;
 
 use log::warn;
 
 use crate::create_new_file;
 use crate::model::{FileData, FileError};
-use crate::utils::{get_system_owner, process_input};
+use crate::utils::{get_system_owner, process_input, handle_input};
 
 pub fn store_file() -> Result<(), FileError> {
-    let file_path = prompt_for_file_path()?;
+    let file_path = setup_input("\nInsert file path you want to store: ", None)?;
     let filename = extract_filename(&file_path)?;
-    let final_name = ask_for_filename_change(&filename)?;
+    let final_name = setup_input(&format!("\nYour current file name is: {}. Do you want to change it? (Y/N): ", filename.display()), Some(&filename))?;
     let file_data = FileData { owner: get_system_owner(), name: final_name };
     create_new_file(file_data, &file_path)?;
     Ok(())
 }
 
-fn prompt_for_file_path() -> Result<PathBuf, FileError> {
+fn setup_input<T: From<String>>(prompt: &str, file_name: Option<&PathBuf>) -> Result<T, FileError> {
     loop {
-        print!("\nInsert file path you want to store: ");
-        io::stdout().flush().map_err(|e| FileError::IOError(e))?;
-        let mut file_path = String::new();
-        io::stdin().read_line(&mut file_path).map_err(|e| FileError::IOError(e))?;
-        let trimmed_path = file_path.trim();
-        if trimmed_path.is_empty() {
-            print!("\n");
-            warn!("File path cannot be empty. Please try again.");
-            continue;
+        print!("{}", prompt);
+        let response = handle_input()?;
+        let result = match file_name {
+            Some(name) => change_filename(&response, name).map(|path| path.to_string()),
+            None => get_file_path(&response).map(|path| path.to_str().unwrap().to_string())
+        };
+        match result {
+            Ok(value) => return Ok(value.into()),
+            Err(_) => continue,
         }
-        let path_buf = PathBuf::from(trimmed_path);
-        if !path_buf.exists() {
-            print!("\n");
-            warn!("File not found at path: {:?}. Please try again.", path_buf);
-            continue;
-        }
-        return Ok(path_buf);
     }
 }
 
@@ -45,18 +37,58 @@ fn extract_filename(path: &PathBuf) -> Result<PathBuf, FileError> {
     }
 }
 
-fn ask_for_filename_change(current_name: &PathBuf) -> Result<String, FileError> {
-    print!("\nYour current file name is: {}. Do you want to change it? (Y/N): ", current_name.display());
-    io::stdout().flush().map_err(|e| FileError::IOError(e))?;
-    let mut response = String::new();
-    io::stdin().read_line(&mut response).map_err(|e| FileError::IOError(e))?;
-    let trimmed_response = response.trim().to_lowercase();
-    if trimmed_response == "y" {
+fn change_filename(choosed_option: &String, current_name: &PathBuf) -> Result<String, FileError> {
+    let option = choosed_option.trim().to_lowercase();
+    if option == "y" {
         match process_input("Add new file name: ", false)? {
             Some(new_name) => Ok(new_name),
             None => Err(FileError::InputError("New file name cannot be empty.".to_string())),
         }
     } else {
         Ok(current_name.to_string_lossy().into_owned())
+    }
+}
+
+fn get_file_path(file_path: &String) -> Result<PathBuf, FileError> {
+    let path = file_path.trim();
+    if path.is_empty() {
+        print!("\n");
+        warn!("File path cannot be empty. Please try again.");
+        return Err(FileError::InputError("Empty path".to_string()));
+    }
+    let path_buf = PathBuf::from(path);
+    if !path_buf.exists() {
+        print!("\n");
+        warn!("File not found at path: {:?}. Please try again.", path_buf);
+        return Err(FileError::FileNotFound);
+    }
+    Ok(path_buf)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_get_file_path_valid() {
+        use tempfile::tempdir;
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("file.pdf");
+        std::fs::File::create(&file_path).unwrap();
+        let input = file_path.to_str().unwrap().to_string();
+        let result = get_file_path(&input);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), file_path);
+    }
+
+    #[test]
+    fn test_extract_filename_valid() {
+        use tempfile::tempdir;
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("file.txt");
+        std::fs::File::create(&file_path).unwrap();
+        let result = extract_filename(&file_path);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), PathBuf::from("file.txt"));
     }
 }
