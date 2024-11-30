@@ -8,24 +8,35 @@ use crate::utils::{process_input, generate_id, prompt_for_file_id};
 pub fn update_file() -> Result<(), FileError> {
     loop {
         let file_id = prompt_for_file_id()?;
-        let mut file = match get_file(file_id) {
-            Ok(file) => file,
-            Err(_) => {
-                print!("\n");
-                warn!("File not found.");
-                continue;
-            }
-        };
-        info!("Modifying file with ID: {}", file_id);
-        file.name = process_input("Add new file name: ", false)?.unwrap();
-        file.description = process_input("Add new file description: ", true)?;
-        if ask_yes_no("Do you want to change the people with access list? (Y/N): ")? {
-            update_people_with_access(&mut file)?;
-        }
-        file.download_permission = ask_yes_no("Do you want to allow download permission for this file? (Y/N): ")?;
+        let mut file = fetch_and_validate_file(file_id)?;
+        update_file_attributes(&mut file)?;
         modify_file(file_id, file).map_err(|e| FileError::InputError(e.to_string()))?;
         return Ok(());
     }
+}
+
+fn fetch_and_validate_file(file_id: i64) -> Result<File, FileError> {
+    match get_file(file_id) {
+        Ok(file) => {
+            info!("Modifying file with ID: {}", file_id);
+            Ok(file)
+        },
+        Err(_) => {
+            print!("\n");
+            warn!("File not found.");
+            Err(FileError::FileNotFound)
+        }
+    }
+}
+
+fn update_file_attributes(file: &mut File) -> Result<(), FileError> {
+    file.name = process_input("Add new file name: ", false)?.unwrap();
+    file.description = process_input("Add new file description: ", true)?;
+    if ask_yes_no("Do you want to change the people with access list? (Y/N): ")? {
+        update_people_with_access(file)?;
+    }
+    file.download_permission = ask_yes_no("Do you want to allow download permission for this file? (Y/N): ")?;
+    Ok(())
 }
 
 fn ask_yes_no(prompt: &str) -> Result<bool, FileError> {
