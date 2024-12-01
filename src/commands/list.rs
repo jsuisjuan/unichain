@@ -5,7 +5,6 @@ use crate::model::{File,FileError};
 use crate::{load_files_from_file, get_path};
 
 pub fn list_files() -> Result<(), FileError> {
-    print!("\n");
     info!("Fetching all the files.");
     let files: Vec<File> = match load_files_from_file(&get_path()) {
         Ok(files) => files,

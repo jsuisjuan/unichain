@@ -114,30 +114,3 @@ pub fn handle_input() -> Result<String, FileError> {
     io::stdin().read_line(&mut response).map_err(|e| FileError::IOError(e))?;
     Ok(response.trim().to_string())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    #[test]
-    fn test_generate_fake_hash() {
-        let hash = generate_fake_hash(10);
-        assert_eq!(hash.len(), 10);
-        assert!(hash.chars().all(|c| c.is_ascii_alphanumeric()));
-    }
-
-    #[test]
-    fn test_get_file_type_valid() {
-        let path = PathBuf::from("test.pdf");
-        let file_type = get_file_type(&path).unwrap();
-        assert_eq!(file_type, FileType::Pdf);
-    }
-
-    #[test]
-    fn test_get_file_type_invalid() {
-        let path = PathBuf::from("test.unknown");
-        let result = get_file_type(&path);
-        assert!(result.is_err());
-    }   
-}

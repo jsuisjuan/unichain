@@ -1,9 +1,8 @@
-use std::io::{self, Write};
 use log::{info, warn};
 
 use unichain::commands::{list_files, view_file, store_file, update_file, delete_file};
 use unichain::model::FileError;
-use unichain::utils::get_system_owner;
+use unichain::utils::{get_system_owner, handle_input};
 
 pub fn run() -> Result<(), FileError> {
     let (_, username, email) = get_system_owner();
@@ -35,10 +34,7 @@ fn print_menu_options() {
 fn get_choosed_option() -> Result<u8, FileError> {
     loop {
         print!("\nChoose an option (0-5): ");
-        io::stdout().flush().map_err(|e| FileError::IOError(e))?;
-        let mut choosed_option = String::new();
-        io::stdin().read_line(&mut choosed_option).map_err(|e| FileError::IOError(e))?;
-        match choosed_option.trim().parse::<u8>() {
+        match handle_input()?.trim().parse::<u8>() {
             Ok(num) if (0..=5).contains(&num) => return Ok(num),
             Ok(_) => warn!("The number must be between 0 and 5."),
             Err(_) => warn!("Invalid digit found in string, please enter a number.")

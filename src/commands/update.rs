@@ -1,9 +1,8 @@
-use std::io::{self, Write};
 use log::{info, warn};
 
 use crate::{get_file, modify_file};
 use crate::model::{File, FileError};
-use crate::utils::{process_input, generate_id, prompt_for_file_id};
+use crate::utils::{process_input, generate_id, prompt_for_file_id, handle_input};
 
 pub fn update_file() -> Result<(), FileError> {
     loop {
@@ -16,21 +15,13 @@ pub fn update_file() -> Result<(), FileError> {
 }
 
 fn fetch_and_validate_file(file_id: i64) -> Result<File, FileError> {
-    match get_file(file_id) {
-        Ok(file) => {
-            info!("Modifying file with ID: {}", file_id);
-            Ok(file)
-        },
-        Err(_) => {
-            print!("\n");
-            warn!("File not found.");
-            Err(FileError::FileNotFound)
-        }
-    }
+    get_file(file_id)
+        .map(|file| { info!("Modifying file with ID: {}", file_id); file })
+        .or_else(|_| { warn!("File not found."); Err(FileError::FileNotFound) })
 }
 
 fn update_file_attributes(file: &mut File) -> Result<(), FileError> {
-    file.name = process_input("Add new file name: ", false)?.unwrap();
+    file.name = process_input("Add new file name: ", false)?.expect("Name should not be empty");
     file.description = process_input("Add new file description: ", true)?;
     if ask_yes_no("Do you want to change the people with access list? (Y/N): ")? {
         update_people_with_access(file)?;
@@ -42,10 +33,7 @@ fn update_file_attributes(file: &mut File) -> Result<(), FileError> {
 fn ask_yes_no(prompt: &str) -> Result<bool, FileError> {
     loop {
         print!("{}", prompt);
-        io::stdout().flush().map_err(|e| FileError::IOError(e))?;
-        let mut response = String::new();
-        io::stdin().read_line(&mut response).map_err(|e| FileError::IOError(e))?;
-        match response.trim().to_lowercase().as_str() {
+        match handle_input()?.trim().to_lowercase().as_str() {
             "y" => return Ok(true),
             "n" => return Ok(false),
             _ => println!("Invalid input. Please enter 'Y' or 'N'.")
@@ -56,8 +44,8 @@ fn ask_yes_no(prompt: &str) -> Result<bool, FileError> {
 fn update_people_with_access(file: &mut File) -> Result<(), FileError> {
     loop {
         println!("\tEnter the new person information:");
-        let name = process_input("Name: ", false)?.unwrap();
-        let email = process_input("E-mail: ", false)?.unwrap();
+        let name = process_input("Name: ", false)?.expect("Name should not be empty");
+        let email = process_input("E-mail: ", false)?.expect("Email should not be empty");
         file.people_with_access.push((generate_id()?, name, email));
         if !ask_yes_no("Do you want to add another person? (Y/N): ")? {
             break;

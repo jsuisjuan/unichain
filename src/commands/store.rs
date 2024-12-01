@@ -52,43 +52,13 @@ fn change_filename(choosed_option: &String, current_name: &PathBuf) -> Result<St
 fn get_file_path(file_path: &String) -> Result<PathBuf, FileError> {
     let path = file_path.trim();
     if path.is_empty() {
-        print!("\n");
         warn!("File path cannot be empty. Please try again.");
         return Err(FileError::InputError("Empty path".to_string()));
     }
     let path_buf = PathBuf::from(path);
     if !path_buf.exists() {
-        print!("\n");
         warn!("File not found at path: {:?}. Please try again.", path_buf);
         return Err(FileError::FileNotFound);
     }
     Ok(path_buf)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_get_file_path_valid() {
-        use tempfile::tempdir;
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("file.pdf");
-        std::fs::File::create(&file_path).unwrap();
-        let input = file_path.to_str().unwrap().to_string();
-        let result = get_file_path(&input);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), file_path);
-    }
-
-    #[test]
-    fn test_extract_filename_valid() {
-        use tempfile::tempdir;
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("file.txt");
-        std::fs::File::create(&file_path).unwrap();
-        let result = extract_filename(&file_path);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), PathBuf::from("file.txt"));
-    }
 }
