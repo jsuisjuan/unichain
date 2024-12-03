@@ -2,11 +2,11 @@ use log::info;
 use serde_json;
 
 use crate::model::{File,FileError};
-use crate::{load_files_from_file, get_path};
+use crate::load_files_from_file;
 
 pub fn list_files() -> Result<(), FileError> {
     info!("Fetching all the files.");
-    let files: Vec<File> = match load_files_from_file(&get_path()) {
+    let files: Vec<File> = match load_files_from_file() {
         Ok(files) => files,
         Err(_) => Err(FileError::FileNotFound)?
     };
